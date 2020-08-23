@@ -8,6 +8,9 @@
 # Do not ignore current project's `.uproject`.
 !/CRBProject.uproject
 
+# Do not ignore current project's `.sln`.
+!/CRBProject.sln
+
 # Do not ignore source, config and plugins dirs.
 !/Source/**
 !/Config/**
