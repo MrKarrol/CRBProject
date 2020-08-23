@@ -29,6 +29,15 @@ private:
 public:
 	UPROPERTY(BlueprintReadOnly) bool isPlaced = false;
 	bool buildingConfigured = false;
+
+	UPROPERTY(EditInstanceOnly)
+	USceneComponent* SceneRoot;
+
 	UPROPERTY(EditInstanceOnly) UStaticMeshComponent *cube;
+
+	/** A decal that projects to the cursor location. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class UDecalComponent* CursorToWorld;
+
 
 };
