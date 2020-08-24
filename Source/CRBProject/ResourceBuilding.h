@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/TextRenderComponent.h"
 #include "ResourceBuilding.generated.h"
 
 UCLASS()
@@ -27,7 +28,7 @@ private:
 	UFUNCTION() FVector currentLocation();
 
 public:
-	UPROPERTY(BlueprintReadOnly) bool isPlaced = false;
+	UPROPERTY(BlueprintReadWrite) bool isPlaced = true;
 	bool buildingConfigured = false;
 
 	UPROPERTY(EditInstanceOnly)
@@ -35,9 +36,13 @@ public:
 
 	UPROPERTY(EditInstanceOnly) UStaticMeshComponent *cube;
 
+	UPROPERTY(VisibleAnywhere) UTextRenderComponent *overlapPercents;
+
 	/** A decal that projects to the cursor location. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UDecalComponent* CursorToWorld;
+
+	
 
 
 };
