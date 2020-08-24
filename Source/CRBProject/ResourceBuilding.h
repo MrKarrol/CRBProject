@@ -26,6 +26,7 @@ public:
 
 private:
 	UFUNCTION() FVector currentLocation();
+	UFUNCTION() float resourceBuildingIncome();
 
 public:
 	UPROPERTY(BlueprintReadWrite) bool isPlaced = true;
@@ -42,7 +43,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UDecalComponent* CursorToWorld;
 
-	
+	UPROPERTY(VisibleAnywhere) float resourceIncomeDistance = 700;
 
 
 };

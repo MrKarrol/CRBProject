@@ -52,24 +52,7 @@ void AResourceBuilding::Tick(float DeltaTime)
 			auto oldLocation = GetActorLocation();
 			SetActorLocation(newLocation);
 
-			TArray<FHitResult> OutHits;
-			FQuat rot = FQuat::Identity;
-			FCollisionObjectQueryParams ObjectQueryParams;
-			ObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
-			FCollisionShape CollisionShape = FCollisionShape::MakeSphere(500);;
-
-			GetWorld()->SweepMultiByObjectType(OutHits, newLocation, newLocation + 500, rot, ObjectQueryParams, CollisionShape, {});
-
-			DrawDebugLine(GetWorld(), newLocation, newLocation + 500,
-				FColor(255, 0, 0), false, -1.f, 0, 5);
-
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of hits %d"), OutHits.Num()));
-
-			for (const auto& result : OutHits)
-			{
-				auto name = result.Actor.Get()->GetName();
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Hits by %s"), *name));
-			}
+			
 		}
 			
 	}
@@ -83,6 +66,45 @@ void AResourceBuilding::Tick(float DeltaTime)
 		}
 		// some logic
 	}
+
+	auto income = resourceBuildingIncome();
+	overlapPercents->SetText(FString::FromInt(income));
+}
+
+float AResourceBuilding::resourceBuildingIncome()
+{
+	TArray<FHitResult> OutHits;
+	FQuat rot = FQuat::Identity;
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	FCollisionShape CollisionShape = FCollisionShape::MakeSphere(resourceIncomeDistance);;
+
+	GetWorld()->SweepMultiByObjectType(OutHits, GetActorLocation(), GetActorLocation() + resourceIncomeDistance, rot, ObjectQueryParams, CollisionShape, {});
+
+	//DrawDebugLine(GetWorld(), newLocation, newLocation + 500,
+		//FColor(255, 0, 0), false, -1.f, 0, 5);
+
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of hits %d"), OutHits.Num()));
+
+	float income = 100;
+	for (const auto& result : OutHits)
+	{
+		auto actor = result.Actor.Get();
+		if (!Cast<AResourceBuilding>(actor))
+			continue;
+
+		float distance = GetDistanceTo(result.Actor.Get());
+		
+		if (distance < 1) // hitted by himself
+			continue;
+
+		if (distance > resourceIncomeDistance) distance = resourceIncomeDistance;
+
+		income += distance / resourceIncomeDistance * 100 - 100;
+		auto name = result.Actor.Get()->GetName();
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Distance %f"), distance));
+	}
+	return income;
 }
 
 FVector AResourceBuilding::currentLocation()
