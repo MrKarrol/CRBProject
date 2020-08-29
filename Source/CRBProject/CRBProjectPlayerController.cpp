@@ -5,6 +5,9 @@
 #include "Runtime/Engine/Classes/Components/DecalComponent.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "CRBProjectCharacter.h"
+
+#include "Kismet/GameplayStatics.h"
+
 #include "Engine/World.h"
 
 ACRBProjectPlayerController::ACRBProjectPlayerController()
@@ -17,6 +20,7 @@ void ACRBProjectPlayerController::AttachRBToController(TScriptInterface<IResourc
 {
 	rb = newRb;
 	rb->setPlaced(false);
+
 	mIsRBAttached = true;
 }
 

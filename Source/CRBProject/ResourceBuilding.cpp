@@ -6,6 +6,8 @@
 #include "Components/DecalComponent.h"
 #include "DrawDebugHelpers.h"
 
+#include <vector>
+
 // Sets default values
 AResourceBuilding::AResourceBuilding()
 {
@@ -131,11 +133,80 @@ float AResourceBuilding::resourceBuildingIncome()
 
 	GetWorld()->SweepMultiByObjectType(OutHits, GetActorLocation(), GetActorLocation() + resourceIncomeDistance, rot, ObjectQueryParams, CollisionShape, {});
 
-	//DrawDebugLine(GetWorld(), newLocation, newLocation + 500,
-		//FColor(255, 0, 0), false, -1.f, 0, 5);
+	{
+		auto endLocation = GetActorLocation() + resourceIncomeDistance / 2;
+		endLocation.Z = 0;
+		DrawDebugLine(GetWorld(), GetActorLocation(), endLocation,
+			FColor(255, 0, 0), false, -1.f, 0, 5);
+	}
+
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of hits %d"), OutHits.Num()));
 
+	using Point = std::pair<float, float>;
+	// like so (on paper looks better))
+	// 1       x
+	// 5     xxxxx
+	// 7    xxxxxxx
+	// 9   xxxxxxxxx
+	//11  xxxxxxxxxxx
+	//11  xxxxxxxxxxx
+	//12 xxxxxx xxxxxx
+	//11  xxxxxxxxxxx
+	//11  xxxxxxxxxxx
+	// 9   xxxxxxxxx
+	// 7    xxxxxxx
+	// 5     xxxxx
+	// 1       x
+	auto getCirclePoints = [](float x, float y, float resourceIncomeDistance)
+	{
+		std::vector<Point> result;
+		float cellSize = resourceIncomeDistance / 6;
+
+		result.emplace_back(x, y + 6 * cellSize);
+		result.emplace_back(x, y - 6 * cellSize);
+
+		auto fillRange = [&result, x, y, cellSize](int range, int step)
+		{
+			for (int iter = -range; iter <= range; ++iter)
+			{
+				result.emplace_back(x + iter * cellSize, y + step * cellSize);
+				if (step != 0) result.emplace_back(x + iter * cellSize, y - step * cellSize);
+			}
+		};
+
+		fillRange(2, 5);
+		fillRange(3, 4);
+		fillRange(4, 3);
+		fillRange(5, 2);
+		fillRange(5, 1);
+		fillRange(6, 0);
+		auto centerIter = std::find(result.begin(), result.end(), std::pair<float, float>(x, y));
+		if (centerIter != result.end())
+			result.erase(centerIter);
+		else
+		{
+			// must not pop up
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Error in income calc")));
+		}
+		
+		return result;
+	};
+
+	auto circlePoints = getCirclePoints(GetActorLocation().X, GetActorLocation().Y, resourceIncomeDistance / 2);
+
+	auto getDistance = [](const Point &a, const Point &b)
+	{
+		double result = 0;
+
+		float x_diff = a.first - b.first;
+		float y_diff = a.second - b.second;
+		result = std::sqrt(x_diff * x_diff + y_diff * y_diff);
+
+		return result;
+	};
+
+	std::vector<Point> wrongPoints;
 	float income = 100;
 	for (const auto& result : OutHits)
 	{
@@ -143,17 +214,23 @@ float AResourceBuilding::resourceBuildingIncome()
 		if (!Cast<AResourceBuilding>(actor))
 			continue;
 
-		float distance = GetDistanceTo(result.Actor.Get());
+		float distanceToAnotherRb = GetDistanceTo(result.Actor.Get());
 		
-		if (distance < 1) // hitted by himself
+		if (distanceToAnotherRb < 1) // hitted by himself
 			continue;
 
-		if (distance > resourceIncomeDistance) distance = resourceIncomeDistance;
+		if (distanceToAnotherRb > resourceIncomeDistance)
+			continue;
 
-		income += distance / resourceIncomeDistance * 100 - 100;
-		auto name = result.Actor.Get()->GetName();
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Distance %f"), distance));
+		for (const auto &point : circlePoints)
+		{
+			auto rbLocation = result.Actor.Get()->GetActorLocation();
+			if (getDistance(point, Point(rbLocation.X, rbLocation.Y)) < resourceIncomeDistance / 2)
+				if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
+					wrongPoints.emplace_back(point);
+		}
 	}
+	income = circlePoints.size() - wrongPoints.size();
 	return income;
 }
 
