@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "ResourceBuildingInterface.h"
 #include "CRBProjectPlayerController.generated.h"
 
 UCLASS()
@@ -13,6 +14,9 @@ class ACRBProjectPlayerController : public APlayerController
 
 public:
 	ACRBProjectPlayerController();
+
+	UFUNCTION(BlueprintCallable)
+	void AttachRBToController(TScriptInterface<IResourceBuildingInterface> rb);
 
 protected:
 	/** True if the controlled character should navigate to the mouse cursor. */
@@ -35,9 +39,18 @@ protected:
 	/** Navigate player to the given world location. */
 	void SetNewMoveDestination(const FVector DestLocation);
 
+	/** Input handlers for action. */
+	void OnActionRequested();
+	void OnActionDisbound();
+
 	/** Input handlers for SetDestination action. */
 	void OnSetDestinationPressed();
 	void OnSetDestinationReleased();
+
+private:
+	bool mIsRBAttached = false;
+	TScriptInterface<IResourceBuildingInterface> rb = nullptr;
+
 };
 
 

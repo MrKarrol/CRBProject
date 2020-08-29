@@ -13,6 +13,13 @@ ACRBProjectPlayerController::ACRBProjectPlayerController()
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
 }
 
+void ACRBProjectPlayerController::AttachRBToController(TScriptInterface<IResourceBuildingInterface> newRb)
+{
+	rb = newRb;
+	rb->setPlaced(false);
+	mIsRBAttached = true;
+}
+
 void ACRBProjectPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
@@ -29,8 +36,8 @@ void ACRBProjectPlayerController::SetupInputComponent()
 	// set up gameplay key bindings
 	Super::SetupInputComponent();
 
-	InputComponent->BindAction("SetDestination", IE_Pressed, this, &ACRBProjectPlayerController::OnSetDestinationPressed);
-	InputComponent->BindAction("SetDestination", IE_Released, this, &ACRBProjectPlayerController::OnSetDestinationReleased);
+	InputComponent->BindAction("SetDestination", IE_Pressed, this, &ACRBProjectPlayerController::OnActionRequested);
+	InputComponent->BindAction("SetDestination", IE_Released, this, &ACRBProjectPlayerController::OnActionDisbound);
 
 	// support touch devices 
 	InputComponent->BindTouch(EInputEvent::IE_Pressed, this, &ACRBProjectPlayerController::MoveToTouchLocation);
@@ -96,6 +103,37 @@ void ACRBProjectPlayerController::SetNewMoveDestination(const FVector DestLocati
 		{
 			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, DestLocation);
 		}
+	}
+}
+
+void ACRBProjectPlayerController::OnActionRequested()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("on action requested")));
+	// if resource building attached
+	if (mIsRBAttached)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("mIsRBAttached true")));
+		// do stuff
+		rb->setPlaced(true);
+	}
+	else // request to move character
+	{
+		OnSetDestinationPressed();
+	}
+}
+
+void ACRBProjectPlayerController::OnActionDisbound()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("on action disbound")));
+	if (mIsRBAttached)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("misRBAttached true to false")));
+		mIsRBAttached = false;
+		rb = nullptr;
+	}
+	else // request to stop moving
+	{
+		OnSetDestinationReleased();
 	}
 }
 

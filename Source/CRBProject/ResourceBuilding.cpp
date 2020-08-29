@@ -31,6 +31,17 @@ AResourceBuilding::AResourceBuilding()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
+bool AResourceBuilding::isPlaced() const
+{
+	return mIsPlaced;
+}
+
+void AResourceBuilding::setPlaced(bool isPlaced)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("IsPlaced")));
+	mIsPlaced = isPlaced;
+}
+
 // Called when the game starts or when spawned
 void AResourceBuilding::BeginPlay()
 {
@@ -43,7 +54,7 @@ void AResourceBuilding::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (! isPlaced)
+	if (! mIsPlaced)
 	{
 		auto newLocation = currentLocation();
 		if (newLocation != FVector(0, 0, 0))
@@ -68,6 +79,10 @@ void AResourceBuilding::Tick(float DeltaTime)
 	}
 
 	auto income = resourceBuildingIncome();
+	if (mIsPlaced)
+		income = currentIncome;
+	else
+		currentIncome = income;
 	overlapPercents->SetText(FString::FromInt(income));
 }
 

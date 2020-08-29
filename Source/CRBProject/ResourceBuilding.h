@@ -5,16 +5,24 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/TextRenderComponent.h"
+#include "ResourceBuildingInterface.h"
 #include "ResourceBuilding.generated.h"
 
 UCLASS()
-class CRBPROJECT_API AResourceBuilding : public AActor
+class CRBPROJECT_API AResourceBuilding 
+	: public AActor
+	, public IResourceBuildingInterface
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
 	AResourceBuilding();
+
+
+	bool isPlaced() const override;
+
+	void setPlaced(bool isPlaced) override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -29,7 +37,7 @@ private:
 	UFUNCTION() float resourceBuildingIncome();
 
 public:
-	UPROPERTY(BlueprintReadWrite) bool isPlaced = true;
+	UPROPERTY(BlueprintReadWrite) bool mIsPlaced = true;
 	bool buildingConfigured = false;
 
 	UPROPERTY(EditInstanceOnly)
@@ -45,5 +53,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere) float resourceIncomeDistance = 700;
 
+private:
+	float currentIncome = 100;
 
 };
