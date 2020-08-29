@@ -23,6 +23,11 @@ class CRBPROJECT_API IResourceBuildingInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	virtual bool isPlaced() const = 0;
-
 	virtual void setPlaced(bool isPlaced) = 0;
+
+	virtual bool isTargeted() const = 0;
+	virtual void targetRB() = 0;
+	virtual void untargetRB() = 0;
+
+	virtual void destroyRB() = 0;
 };

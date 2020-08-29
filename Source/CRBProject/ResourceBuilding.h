@@ -24,9 +24,23 @@ public:
 
 	void setPlaced(bool isPlaced) override;
 
+	bool isTargeted() const override;
+	void targetRB() override;
+	void untargetRB() override;
+
+	void destroyRB() override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void onTargeted();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void onUntargeted();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+
 
 public:	
 	// Called every frame
@@ -56,4 +70,5 @@ public:
 private:
 	float currentIncome = 100;
 
+	bool mIsTargeted = false;
 };

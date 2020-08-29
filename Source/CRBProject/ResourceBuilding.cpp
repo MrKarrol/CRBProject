@@ -38,8 +38,38 @@ bool AResourceBuilding::isPlaced() const
 
 void AResourceBuilding::setPlaced(bool isPlaced)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("IsPlaced")));
 	mIsPlaced = isPlaced;
+}
+
+bool AResourceBuilding::isTargeted() const
+{
+	return mIsTargeted;
+}
+
+void AResourceBuilding::targetRB()
+{
+	mIsTargeted = true;
+
+	CursorToWorld->SetVisibility(true);
+	overlapPercents->SetVisibility(true);
+
+	onTargeted();
+}
+
+void AResourceBuilding::untargetRB()
+{
+	mIsTargeted = false;
+
+	CursorToWorld->SetVisibility(false);
+	overlapPercents->SetVisibility(false);
+
+	onUntargeted();
+}
+
+void AResourceBuilding::destroyRB()
+{
+	onUntargeted();
+	Destroy();
 }
 
 // Called when the game starts or when spawned
@@ -62,8 +92,6 @@ void AResourceBuilding::Tick(float DeltaTime)
 			// change location based on cursor position
 			auto oldLocation = GetActorLocation();
 			SetActorLocation(newLocation);
-
-			
 		}
 			
 	}
@@ -72,6 +100,8 @@ void AResourceBuilding::Tick(float DeltaTime)
 		if (!buildingConfigured)
 		{
 			cube->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			CursorToWorld->SetVisibility(false);
+			overlapPercents->SetVisibility(false);
 
 			buildingConfigured = true;
 		}
@@ -80,7 +110,12 @@ void AResourceBuilding::Tick(float DeltaTime)
 
 	auto income = resourceBuildingIncome();
 	if (mIsPlaced)
-		income = currentIncome;
+	{
+		if (income > currentIncome) // if near rb destroyed
+			currentIncome = income;
+		else
+			income = currentIncome;
+	}
 	else
 		currentIncome = income;
 	overlapPercents->SetText(FString::FromInt(income));

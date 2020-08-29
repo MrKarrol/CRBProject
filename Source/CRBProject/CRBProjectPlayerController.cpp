@@ -108,26 +108,43 @@ void ACRBProjectPlayerController::SetNewMoveDestination(const FVector DestLocati
 
 void ACRBProjectPlayerController::OnActionRequested()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("on action requested")));
 	// if resource building attached
 	if (mIsRBAttached)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("mIsRBAttached true")));
 		// do stuff
 		rb->setPlaced(true);
 	}
-	else // request to move character
+	else // check if resource building clicked
 	{
-		OnSetDestinationPressed();
+		FHitResult result;
+		GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, result);
+		if (Cast<IResourceBuildingInterface>(result.Actor.Get()))
+		{
+			if (mIsRBTargeted)
+				targetedRb->untargetRB();
+			else
+				mIsRBTargeted = true;
+
+			targetedRb = result.Actor.Get();
+			targetedRb->targetRB();
+		}
+		else // request to move character
+		{
+			if (mIsRBTargeted)
+			{
+				mIsRBTargeted = false;
+				targetedRb->untargetRB();
+				targetedRb = nullptr;
+			}
+			OnSetDestinationPressed();
+		}
 	}
 }
 
 void ACRBProjectPlayerController::OnActionDisbound()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("on action disbound")));
 	if (mIsRBAttached)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("misRBAttached true to false")));
 		mIsRBAttached = false;
 		rb = nullptr;
 	}

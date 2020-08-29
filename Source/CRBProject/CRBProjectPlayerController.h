@@ -51,6 +51,8 @@ private:
 	bool mIsRBAttached = false;
 	TScriptInterface<IResourceBuildingInterface> rb = nullptr;
 
+	bool mIsRBTargeted = false;
+	TScriptInterface<IResourceBuildingInterface> targetedRb = nullptr;
 };
 
 
