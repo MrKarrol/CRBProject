@@ -5,6 +5,7 @@
 
 #include "Components/DecalComponent.h"
 #include "DrawDebugHelpers.h"
+#include "NavigationSystem.h"
 
 #include <vector>
 
@@ -93,7 +94,6 @@ void AResourceBuilding::Tick(float DeltaTime)
 		if (newLocation != FVector(0, 0, 0))
 		{
 			SetActorLocation(newLocation);
-			location = newLocation;
 		}
 			
 	}
@@ -203,6 +203,51 @@ float AResourceBuilding::resourceBuildingIncome()
 
 	float debugZ = 0;
 
+	// check if income points is in unreachable location
+	int paintedPoints = 0;
+	for (const auto &point : circlePoints)
+	{
+		FVector start = GetActorLocation();
+		FVector end(point.first, point.second, start.Z);
+		if (! mIsPlaced)
+			DrawDebugPoint(GetWorld(), end, 10.f, FColor::Red);
+
+		//// trying use recast nav mesh
+		auto world = GetWorld();
+		if (!world)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Cant get world")));
+			continue;
+		}
+		auto NavSystem = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
+		if (!NavSystem)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Cant get nav system")));
+			continue;
+		}
+		const ANavigationData* NavData = NavSystem->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
+		if (!NavData)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Cant get nav data")));
+			continue;
+		}
+		FPathFindingQuery query(NavSystem, *NavData, GetActorLocation(), end);
+		if (!Cast<UNavigationSystemV1>(NavSystem)->TestPathSync(query))
+		{
+			paintedPoints++;
+			if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
+			{
+				wrongPoints.emplace_back(point);
+				continue;
+			}
+			// return;
+		}
+		//// end trying use recast nav mesh
+	}
+	if (! mIsPlaced)
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of unreachable points %d"), paintedPoints));
+
+	// check income based on another rb
 	for (const auto& result : OutHits)
 	{
 		auto actor = result.Actor.Get();
@@ -222,21 +267,11 @@ float AResourceBuilding::resourceBuildingIncome()
 			auto rbLocation = result.Actor.Get()->GetActorLocation();
 			if (getDistance(point, Point(rbLocation.X, rbLocation.Y)) < resourceIncomeDistance / 2)
 				if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
+				{
 					wrongPoints.emplace_back(point);
-
-			float length = 0;
-
-			// trying use recast nav mesh
-			FNavLocation randomReachablePoint;
-			navData->GetRandomPointInNavigableRadius(location, 500, randomReachablePoint);
-			FVector start = location;
-			FVector end(point.first, point.second, start.Z);
-			auto queryResult = navData->CalcPathLength(start, end, length);
-			if (length > 400)
-				DrawDebugPoint(GetWorld(), end, 10, FColor::Red);
-			// end trying use recast nav mesh
+					continue;
+				}
 		}
-		
 	}
 	income = circlePoints.size() - wrongPoints.size();
 
@@ -251,6 +286,7 @@ FVector AResourceBuilding::currentLocation()
 	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, result);
 
 	mouseLocation = result.Location;
+	location = mouseLocation;
 
 	return mouseLocation;
 }
