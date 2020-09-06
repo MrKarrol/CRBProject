@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Components/TextRenderComponent.h"
 #include "ResourceBuildingInterface.h"
+#include "NavigationData.h"
 #include "ResourceBuilding.generated.h"
 
 UCLASS()
@@ -52,6 +53,7 @@ private:
 
 public:
 	UPROPERTY(BlueprintReadWrite) bool mIsPlaced = true;
+	UPROPERTY(BlueprintReadWrite) ANavigationData *navData = nullptr;
 	bool buildingConfigured = false;
 
 	UPROPERTY(EditInstanceOnly)
@@ -71,4 +73,6 @@ private:
 	float currentIncome = 100;
 
 	bool mIsTargeted = false;
+
+	FVector location;
 };

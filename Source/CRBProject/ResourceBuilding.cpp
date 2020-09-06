@@ -8,6 +8,7 @@
 
 #include <vector>
 
+
 // Sets default values
 AResourceBuilding::AResourceBuilding()
 {
@@ -91,9 +92,8 @@ void AResourceBuilding::Tick(float DeltaTime)
 		auto newLocation = currentLocation();
 		if (newLocation != FVector(0, 0, 0))
 		{
-			// change location based on cursor position
-			auto oldLocation = GetActorLocation();
 			SetActorLocation(newLocation);
+			location = newLocation;
 		}
 			
 	}
@@ -132,14 +132,6 @@ float AResourceBuilding::resourceBuildingIncome()
 	FCollisionShape CollisionShape = FCollisionShape::MakeSphere(resourceIncomeDistance);;
 
 	GetWorld()->SweepMultiByObjectType(OutHits, GetActorLocation(), GetActorLocation() + resourceIncomeDistance, rot, ObjectQueryParams, CollisionShape, {});
-
-	{
-		auto endLocation = GetActorLocation() + resourceIncomeDistance / 2;
-		endLocation.Z = 0;
-		DrawDebugLine(GetWorld(), GetActorLocation(), endLocation,
-			FColor(255, 0, 0), false, -1.f, 0, 5);
-	}
-
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of hits %d"), OutHits.Num()));
 
@@ -208,6 +200,9 @@ float AResourceBuilding::resourceBuildingIncome()
 
 	std::vector<Point> wrongPoints;
 	float income = 100;
+
+	float debugZ = 0;
+
 	for (const auto& result : OutHits)
 	{
 		auto actor = result.Actor.Get();
@@ -228,9 +223,22 @@ float AResourceBuilding::resourceBuildingIncome()
 			if (getDistance(point, Point(rbLocation.X, rbLocation.Y)) < resourceIncomeDistance / 2)
 				if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
 					wrongPoints.emplace_back(point);
+
+			float length = 0;
+
+			FNavLocation randomReachablePoint;
+			navData->GetRandomPointInNavigableRadius(location, 500, randomReachablePoint);
+			FVector start = location;
+			FVector end(point.first, point.second, start.Z);
+			auto queryResult = navData->CalcPathLength(start, end, length);
+			if (length > 400)
+				DrawDebugPoint(GetWorld(), end, 10, FColor::Red);
+			
 		}
+		
 	}
 	income = circlePoints.size() - wrongPoints.size();
+
 	return income;
 }
 
