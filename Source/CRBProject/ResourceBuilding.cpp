@@ -226,6 +226,7 @@ float AResourceBuilding::resourceBuildingIncome()
 
 			float length = 0;
 
+			// trying use recast nav mesh
 			FNavLocation randomReachablePoint;
 			navData->GetRandomPointInNavigableRadius(location, 500, randomReachablePoint);
 			FVector start = location;
@@ -233,7 +234,7 @@ float AResourceBuilding::resourceBuildingIncome()
 			auto queryResult = navData->CalcPathLength(start, end, length);
 			if (length > 400)
 				DrawDebugPoint(GetWorld(), end, 10, FColor::Red);
-			
+			// end trying use recast nav mesh
 		}
 		
 	}
