@@ -52,9 +52,8 @@ private:
 	UFUNCTION() float resourceBuildingIncome();
 
 public:
-	UPROPERTY(BlueprintReadWrite) bool mIsPlaced = true;
-	UPROPERTY(BlueprintReadWrite) ANavigationData *navData = nullptr;
-	bool buildingConfigured = false;
+	bool mIsPlaced = true;
+	bool postPlacingActionsApplied = false;
 
 	UPROPERTY(EditInstanceOnly)
 	USceneComponent* SceneRoot;
@@ -67,12 +66,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UDecalComponent* CursorToWorld;
 
-	UPROPERTY(VisibleAnywhere) float resourceIncomeDistance = 700;
+	UPROPERTY(VisibleAnywhere) float incomeAreaRadius = 350;
 
 private:
 	float currentIncome = 100;
 
 	bool mIsTargeted = false;
-
-	FVector location;
 };

@@ -99,13 +99,13 @@ void AResourceBuilding::Tick(float DeltaTime)
 	}
 	else
 	{
-		if (!buildingConfigured)
+		if (!postPlacingActionsApplied)
 		{
 			cube->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 			CursorToWorld->SetVisibility(false);
 			overlapPercents->SetVisibility(false);
 
-			buildingConfigured = true;
+			postPlacingActionsApplied = true;
 		}
 		// some logic
 	}
@@ -115,157 +115,132 @@ void AResourceBuilding::Tick(float DeltaTime)
 	{
 		if (income > currentIncome) // if near rb destroyed
 			currentIncome = income;
-		else
-			income = currentIncome;
 	}
 	else
 		currentIncome = income;
-	overlapPercents->SetText(FString::FromInt(income));
+	overlapPercents->SetText(FString::FromInt(currentIncome));
 }
+
+
+using Point = std::pair<float, float>;
+
+double getDistance(const Point &a, const Point &b)
+{
+	double result = 0;
+
+	float x_diff = a.first - b.first;
+	float y_diff = a.second - b.second;
+	result = std::sqrt(x_diff * x_diff + y_diff * y_diff);
+
+	return result;
+};
+
+// getting income circle points like so (on paper looks better))
+// 1       x
+// 5     xxxxx
+// 7    xxxxxxx
+// 9   xxxxxxxxx
+//11  xxxxxxxxxxx
+//11  xxxxxxxxxxx
+//12 xxxxxx xxxxxx
+//11  xxxxxxxxxxx
+//11  xxxxxxxxxxx
+// 9   xxxxxxxxx
+// 7    xxxxxxx
+// 5     xxxxx
+// 1       x
+std::vector<Point> getCirclePoints(float x, float y, float resourceIncomeDistance)
+{
+	std::vector<Point> result;
+	float cellSize = resourceIncomeDistance / 6;
+
+	result.emplace_back(x, y + 6 * cellSize);
+	result.emplace_back(x, y - 6 * cellSize);
+
+	auto fillRange = [&result, x, y, cellSize](int range, int step)
+	{
+		for (int iter = -range; iter <= range; ++iter)
+		{
+			result.emplace_back(x + iter * cellSize, y + step * cellSize);
+			if (step != 0) result.emplace_back(x + iter * cellSize, y - step * cellSize);
+		}
+	};
+
+	fillRange(2, 5);
+	fillRange(3, 4);
+	fillRange(4, 3);
+	fillRange(5, 2);
+	fillRange(5, 1);
+	fillRange(6, 0);
+	auto centerIter = std::find(result.begin(), result.end(), std::pair<float, float>(x, y));
+	if (centerIter != result.end())
+		result.erase(centerIter);
+
+	return result;
+};
 
 float AResourceBuilding::resourceBuildingIncome()
 {
-	TArray<FHitResult> OutHits;
-	FQuat rot = FQuat::Identity;
-	FCollisionObjectQueryParams ObjectQueryParams;
-	ObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
-	FCollisionShape CollisionShape = FCollisionShape::MakeSphere(resourceIncomeDistance);;
-
-	GetWorld()->SweepMultiByObjectType(OutHits, GetActorLocation(), GetActorLocation() + resourceIncomeDistance, rot, ObjectQueryParams, CollisionShape, {});
-
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of hits %d"), OutHits.Num()));
-
-	using Point = std::pair<float, float>;
-	// like so (on paper looks better))
-	// 1       x
-	// 5     xxxxx
-	// 7    xxxxxxx
-	// 9   xxxxxxxxx
-	//11  xxxxxxxxxxx
-	//11  xxxxxxxxxxx
-	//12 xxxxxx xxxxxx
-	//11  xxxxxxxxxxx
-	//11  xxxxxxxxxxx
-	// 9   xxxxxxxxx
-	// 7    xxxxxxx
-	// 5     xxxxx
-	// 1       x
-	auto getCirclePoints = [](float x, float y, float resourceIncomeDistance)
-	{
-		std::vector<Point> result;
-		float cellSize = resourceIncomeDistance / 6;
-
-		result.emplace_back(x, y + 6 * cellSize);
-		result.emplace_back(x, y - 6 * cellSize);
-
-		auto fillRange = [&result, x, y, cellSize](int range, int step)
-		{
-			for (int iter = -range; iter <= range; ++iter)
-			{
-				result.emplace_back(x + iter * cellSize, y + step * cellSize);
-				if (step != 0) result.emplace_back(x + iter * cellSize, y - step * cellSize);
-			}
-		};
-
-		fillRange(2, 5);
-		fillRange(3, 4);
-		fillRange(4, 3);
-		fillRange(5, 2);
-		fillRange(5, 1);
-		fillRange(6, 0);
-		auto centerIter = std::find(result.begin(), result.end(), std::pair<float, float>(x, y));
-		if (centerIter != result.end())
-			result.erase(centerIter);
-		else
-		{
-			// must not pop up
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Error in income calc")));
-		}
-		
-		return result;
-	};
-
-	auto circlePoints = getCirclePoints(GetActorLocation().X, GetActorLocation().Y, resourceIncomeDistance / 2);
-
-	auto getDistance = [](const Point &a, const Point &b)
-	{
-		double result = 0;
-
-		float x_diff = a.first - b.first;
-		float y_diff = a.second - b.second;
-		result = std::sqrt(x_diff * x_diff + y_diff * y_diff);
-
-		return result;
-	};
+	auto incomeAreaPoints = getCirclePoints(GetActorLocation().X, GetActorLocation().Y, incomeAreaRadius);
 
 	std::vector<Point> wrongPoints;
-	float income = 100;
-
-	float debugZ = 0;
 
 	// check if income points is in unreachable location
-	int paintedPoints = 0;
-	for (const auto &point : circlePoints)
+	for (const auto &point : incomeAreaPoints)
 	{
 		FVector start = GetActorLocation();
 		FVector end(point.first, point.second, start.Z);
-		if (! mIsPlaced)
-			DrawDebugPoint(GetWorld(), end, 10.f, FColor::Red);
+		/*if (! mIsPlaced)
+			DrawDebugPoint(GetWorld(), end, 10.f, FColor::Red);*/
 
-		//// trying use recast nav mesh
 		auto world = GetWorld();
 		if (!world)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Cant get world")));
 			continue;
-		}
+		
 		auto NavSystem = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
 		if (!NavSystem)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Cant get nav system")));
 			continue;
-		}
+		
 		const ANavigationData* NavData = NavSystem->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
 		if (!NavData)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Cant get nav data")));
 			continue;
-		}
+		
 		FPathFindingQuery query(NavSystem, *NavData, GetActorLocation(), end);
 		if (!Cast<UNavigationSystemV1>(NavSystem)->TestPathSync(query))
 		{
-			paintedPoints++;
 			if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
 			{
 				wrongPoints.emplace_back(point);
 				continue;
 			}
-			// return;
 		}
-		//// end trying use recast nav mesh
 	}
-	if (! mIsPlaced)
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Number of unreachable points %d"), paintedPoints));
 
 	// check income based on another rb
-	for (const auto& result : OutHits)
+	TArray<FHitResult> OutHits;
+	FQuat rot = FQuat::Identity;
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	FCollisionShape CollisionShape = FCollisionShape::MakeSphere(incomeAreaRadius*2);
+
+	GetWorld()->SweepMultiByObjectType(OutHits, GetActorLocation(), GetActorLocation() + incomeAreaRadius*2, rot, ObjectQueryParams, CollisionShape, {});
+
+	for (const auto& hit : OutHits)
 	{
-		auto actor = result.Actor.Get();
+		auto actor = hit.Actor.Get();
 		if (!Cast<AResourceBuilding>(actor))
 			continue;
 
-		float distanceToAnotherRb = GetDistanceTo(result.Actor.Get());
-		
+		float distanceToAnotherRb = GetDistanceTo(hit.Actor.Get());
 		if (distanceToAnotherRb < 1) // hitted by himself
 			continue;
-
-		if (distanceToAnotherRb > resourceIncomeDistance)
+		if (distanceToAnotherRb > incomeAreaRadius*2) // income circles do not overlap each other
 			continue;
 
-		for (const auto &point : circlePoints)
+		for (const auto &point : incomeAreaPoints)
 		{
-			auto rbLocation = result.Actor.Get()->GetActorLocation();
-			if (getDistance(point, Point(rbLocation.X, rbLocation.Y)) < resourceIncomeDistance / 2)
+			auto rbLocation = hit.Actor.Get()->GetActorLocation();
+			if (getDistance(point, Point(rbLocation.X, rbLocation.Y)) < incomeAreaRadius)
 				if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
 				{
 					wrongPoints.emplace_back(point);
@@ -273,21 +248,15 @@ float AResourceBuilding::resourceBuildingIncome()
 				}
 		}
 	}
-	income = circlePoints.size() - wrongPoints.size();
+	float income = incomeAreaPoints.size() - wrongPoints.size();
 
 	return income;
 }
 
 FVector AResourceBuilding::currentLocation()
 {
-	FVector mouseLocation;
-	FVector mouseDirection;
 	FHitResult result;
 	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, result);
-
-	mouseLocation = result.Location;
-	location = mouseLocation;
-
-	return mouseLocation;
+	return result.Location;
 }
 
