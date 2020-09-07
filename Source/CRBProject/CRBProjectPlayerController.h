@@ -48,6 +48,9 @@ protected:
 	void OnSetDestinationReleased();
 
 private:
+	void UntargetRB();
+
+private:
 	bool mIsRBAttached = false;
 	TScriptInterface<IResourceBuildingInterface> rb = nullptr;
 

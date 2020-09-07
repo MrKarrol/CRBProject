@@ -7,6 +7,7 @@
 #include "CRBProjectCharacter.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "ResourceBuilding.h"
 
 #include "Engine/World.h"
 
@@ -18,6 +19,17 @@ ACRBProjectPlayerController::ACRBProjectPlayerController()
 
 void ACRBProjectPlayerController::AttachRBToController(TScriptInterface<IResourceBuildingInterface> newRb)
 {
+	// preparation
+	UntargetRB();
+
+	TArray<AActor*> rbs;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AResourceBuilding::StaticClass(), rbs);
+	for (auto resourceBuilding : rbs)
+	{
+		Cast<AResourceBuilding>(resourceBuilding)->showIncomeArea(true);
+	}
+
+	// creating
 	rb = newRb;
 	rb->setPlaced(false);
 
@@ -110,13 +122,34 @@ void ACRBProjectPlayerController::SetNewMoveDestination(const FVector DestLocati
 	}
 }
 
+void ACRBProjectPlayerController::UntargetRB()
+{
+	if (mIsRBTargeted)
+	{
+		mIsRBTargeted = false;
+		targetedRb->untargetRB();
+		targetedRb = nullptr;
+	}
+}
+
+
 void ACRBProjectPlayerController::OnActionRequested()
 {
 	// if resource building attached
 	if (mIsRBAttached)
 	{
-		// do stuff
 		rb->setPlaced(true);
+
+		TArray<AActor*> rbs;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AResourceBuilding::StaticClass(), rbs);
+		for (auto resourceBuilding : rbs)
+		{
+			Cast<AResourceBuilding>(resourceBuilding)->showIncomeArea(false);
+		}
+
+		mIsRBTargeted = true;
+		targetedRb = rb;
+		targetedRb->targetRB();
 	}
 	else // check if resource building clicked
 	{
@@ -134,12 +167,7 @@ void ACRBProjectPlayerController::OnActionRequested()
 		}
 		else // request to move character
 		{
-			if (mIsRBTargeted)
-			{
-				mIsRBTargeted = false;
-				targetedRb->untargetRB();
-				targetedRb = nullptr;
-			}
+			UntargetRB();
 			OnSetDestinationPressed();
 		}
 	}
@@ -169,3 +197,4 @@ void ACRBProjectPlayerController::OnSetDestinationReleased()
 	// clear flag to indicate we should stop updating the destination
 	bMoveToMouseCursor = false;
 }
+

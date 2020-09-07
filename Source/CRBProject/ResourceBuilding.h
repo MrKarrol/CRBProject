@@ -31,6 +31,8 @@ public:
 
 	void destroyRB() override;
 
+	void showIncomeArea(bool show);
+
 	UFUNCTION(BlueprintImplementableEvent)
 		void onTargeted();
 

@@ -53,20 +53,14 @@ bool AResourceBuilding::isTargeted() const
 void AResourceBuilding::targetRB()
 {
 	mIsTargeted = true;
-
-	CursorToWorld->SetVisibility(true);
-	overlapPercents->SetVisibility(true);
-
+	showIncomeArea(true);
 	onTargeted();
 }
 
 void AResourceBuilding::untargetRB()
 {
 	mIsTargeted = false;
-
-	CursorToWorld->SetVisibility(false);
-	overlapPercents->SetVisibility(false);
-
+	showIncomeArea(false);
 	onUntargeted();
 }
 
@@ -76,11 +70,16 @@ void AResourceBuilding::destroyRB()
 	Destroy();
 }
 
+void AResourceBuilding::showIncomeArea(bool show)
+{
+	CursorToWorld->SetVisibility(show);
+	overlapPercents->SetVisibility(show);
+}
+
 // Called when the game starts or when spawned
 void AResourceBuilding::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -102,8 +101,6 @@ void AResourceBuilding::Tick(float DeltaTime)
 		if (!postPlacingActionsApplied)
 		{
 			cube->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			CursorToWorld->SetVisibility(false);
-			overlapPercents->SetVisibility(false);
 
 			postPlacingActionsApplied = true;
 		}
