@@ -16,7 +16,7 @@ public:
 	ACRBProjectPlayerController();
 
 	UFUNCTION(BlueprintCallable)
-	void AttachRBToController(TScriptInterface<IResourceBuildingInterface> rb);
+	void AttachRbToController(TScriptInterface<IResourceBuildingInterface> rb);
 
 protected:
 	/** True if the controlled character should navigate to the mouse cursor. */
@@ -48,14 +48,14 @@ protected:
 	void OnSetDestinationReleased();
 
 private:
-	void UntargetRB();
+	void UnselectRb();
 
 private:
-	bool mIsRBAttached = false;
-	TScriptInterface<IResourceBuildingInterface> rb = nullptr;
+	bool m_IsRbAttached = false;
+	TScriptInterface<IResourceBuildingInterface> m_AttachedRb = nullptr;
 
-	bool mIsRBTargeted = false;
-	TScriptInterface<IResourceBuildingInterface> targetedRb = nullptr;
+	bool m_IsRbSelected = false;
+	TScriptInterface<IResourceBuildingInterface> m_SelectedRb = nullptr;
 };
 
 

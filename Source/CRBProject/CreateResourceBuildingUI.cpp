@@ -26,14 +26,9 @@ void UCreateResourceBuildingUI::NativeTick(const FGeometry& MyGeometry, float In
 	// Do your custom tick stuff here
 }
 
-FVector UCreateResourceBuildingUI::currentLocation()
+FVector UCreateResourceBuildingUI::CurrentLocation()
 {
-	FVector mouseLocation;
-	FVector mouseDirection;
-	FHitResult result;
-	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, result);
-
-	mouseLocation = result.Location;
-
-	return mouseLocation;
+	FHitResult hit_result;
+	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, hit_result);
+	return hit_result.Location;
 }

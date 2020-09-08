@@ -21,57 +21,53 @@ public:
 	AResourceBuilding();
 
 
-	bool isPlaced() const override;
+	bool IsPlaced() const override;
 
-	void setPlaced(bool isPlaced) override;
+	void SetPlaced(bool isPlaced) override;
 
-	bool isTargeted() const override;
-	void targetRB() override;
-	void untargetRB() override;
+	bool IsSelected() const override;
+	void Select() override;
+	void Unselect() override;
 
-	void destroyRB() override;
+	void DestroyResourceBuilding() override;
 
-	void showIncomeArea(bool show);
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void onTargeted();
+	void ShowIncomeArea(bool show);
 
 	UFUNCTION(BlueprintImplementableEvent)
-		void onUntargeted();
+	void OnSelected();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnUnselected();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-private:
-	UFUNCTION() FVector currentLocation();
-	UFUNCTION() float resourceBuildingIncome();
-
 public:
-	bool mIsPlaced = true;
-	bool postPlacingActionsApplied = false;
-
 	UPROPERTY(EditInstanceOnly)
-	USceneComponent* SceneRoot;
+	USceneComponent* scene_root;
 
 	UPROPERTY(EditInstanceOnly) UStaticMeshComponent *cube;
 
-	UPROPERTY(VisibleAnywhere) UTextRenderComponent *overlapPercents;
+	UPROPERTY(VisibleAnywhere) UTextRenderComponent *income_text;
 
 	/** A decal that projects to the cursor location. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UDecalComponent* CursorToWorld;
+	class UDecalComponent* income_area_circle;
 
-	UPROPERTY(VisibleAnywhere) float incomeAreaRadius = 350;
+	UPROPERTY(VisibleAnywhere) float income_area_radius = 350;
 
 private:
-	float currentIncome = 100;
+	UFUNCTION() FVector CurrentLocation();
+	UFUNCTION() float ResourceBuildingIncome();
 
-	bool mIsTargeted = false;
+private:
+	bool m_PostPlacingActionsApplied = false;
+	bool m_IsPlaced = true;
+	float m_CurrentIncome = 100;
+	bool m_IsSelected = false;
 };

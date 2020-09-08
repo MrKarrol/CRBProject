@@ -17,11 +17,11 @@ class CRBPROJECT_API UControlResourceBuildingUI : public UUserWidget
 	
 public:
 	UFUNCTION(BlueprintCallable)
-	void attachRbToWidget(TScriptInterface<IResourceBuildingInterface> newRb);
+	void AttachRbToWidget(TScriptInterface<IResourceBuildingInterface> rb);
 
 	UFUNCTION(BlueprintCallable)
-	void destroyRB();
+	void DestroyRb();
 
 private:
-	TScriptInterface<IResourceBuildingInterface> rb;
+	TScriptInterface<IResourceBuildingInterface> m_Rb;
 };

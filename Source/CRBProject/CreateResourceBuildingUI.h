@@ -24,7 +24,7 @@ public:
 	// Optionally override the tick event
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	UFUNCTION(BlueprintCallable) FVector currentLocation();
+	UFUNCTION(BlueprintCallable) FVector CurrentLocation();
 
 public:
 	UPROPERTY(BlueprintReadWrite) float height = 250.0;

@@ -14,8 +14,8 @@
 AResourceBuilding::AResourceBuilding()
 {
 	// In your constructor
-	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Scene Root"));
-	RootComponent = SceneRoot;
+	scene_root = CreateDefaultSubobject<USceneComponent>(TEXT("Scene Root"));
+	RootComponent = scene_root;
 
 	cube = CreateDefaultSubobject<UStaticMeshComponent>("Cube");
 	cube->SetupAttachment(RootComponent);
@@ -24,56 +24,56 @@ AResourceBuilding::AResourceBuilding()
 	cube->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Create a decal in the world to show the cursor's location
-	CursorToWorld = CreateDefaultSubobject<UDecalComponent>("CursorToWorld");
-	CursorToWorld->SetupAttachment(RootComponent);
-	CursorToWorld->SetRelativeLocation(FVector(0, 0, 0));
+	income_area_circle = CreateDefaultSubobject<UDecalComponent>("CursorToWorld");
+	income_area_circle->SetupAttachment(RootComponent);
+	income_area_circle->SetRelativeLocation(FVector(0, 0, 0));
 
-	overlapPercents = CreateDefaultSubobject<UTextRenderComponent>("overlapPercents");
-	overlapPercents->SetupAttachment(RootComponent);
+	income_text = CreateDefaultSubobject<UTextRenderComponent>("overlapPercents");
+	income_text->SetupAttachment(RootComponent);
 
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-bool AResourceBuilding::isPlaced() const
+bool AResourceBuilding::IsPlaced() const
 {
-	return mIsPlaced;
+	return m_IsPlaced;
 }
 
-void AResourceBuilding::setPlaced(bool isPlaced)
+void AResourceBuilding::SetPlaced(bool isPlaced)
 {
-	mIsPlaced = isPlaced;
+	m_IsPlaced = isPlaced;
 }
 
-bool AResourceBuilding::isTargeted() const
+bool AResourceBuilding::IsSelected() const
 {
-	return mIsTargeted;
+	return m_IsSelected;
 }
 
-void AResourceBuilding::targetRB()
+void AResourceBuilding::Select()
 {
-	mIsTargeted = true;
-	showIncomeArea(true);
-	onTargeted();
+	m_IsSelected = true;
+	ShowIncomeArea(true);
+	OnSelected();
 }
 
-void AResourceBuilding::untargetRB()
+void AResourceBuilding::Unselect()
 {
-	mIsTargeted = false;
-	showIncomeArea(false);
-	onUntargeted();
+	m_IsSelected = false;
+	ShowIncomeArea(false);
+	OnUnselected();
 }
 
-void AResourceBuilding::destroyRB()
+void AResourceBuilding::DestroyResourceBuilding()
 {
-	onUntargeted();
+	OnUnselected();
 	Destroy();
 }
 
-void AResourceBuilding::showIncomeArea(bool show)
+void AResourceBuilding::ShowIncomeArea(bool show)
 {
-	CursorToWorld->SetVisibility(show);
-	overlapPercents->SetVisibility(show);
+	income_area_circle->SetVisibility(show);
+	income_text->SetVisibility(show);
 }
 
 // Called when the game starts or when spawned
@@ -87,41 +87,41 @@ void AResourceBuilding::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (! mIsPlaced)
+	if (! m_IsPlaced)
 	{
-		auto newLocation = currentLocation();
-		if (newLocation != FVector(0, 0, 0))
+		auto new_location = CurrentLocation();
+		if (new_location != FVector(0, 0, 0))
 		{
-			SetActorLocation(newLocation);
+			SetActorLocation(new_location);
 		}
 			
 	}
 	else
 	{
-		if (!postPlacingActionsApplied)
+		if (! m_PostPlacingActionsApplied)
 		{
 			cube->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
-			postPlacingActionsApplied = true;
+			m_PostPlacingActionsApplied = true;
 		}
 		// some logic
 	}
 
-	auto income = resourceBuildingIncome();
-	if (mIsPlaced)
+	auto income = ResourceBuildingIncome();
+	if (m_IsPlaced)
 	{
-		if (income > currentIncome) // if near rb destroyed
-			currentIncome = income;
+		if (income > m_CurrentIncome) // if near rb destroyed
+			m_CurrentIncome = income;
 	}
 	else
-		currentIncome = income;
-	overlapPercents->SetText(FString::FromInt(currentIncome));
+		m_CurrentIncome = income;
+	income_text->SetText(FString::FromInt(m_CurrentIncome));
 }
 
 
 using Point = std::pair<float, float>;
 
-double getDistance(const Point &a, const Point &b)
+double GetDistance(const Point &a, const Point &b)
 {
 	double result = 0;
 
@@ -146,44 +146,44 @@ double getDistance(const Point &a, const Point &b)
 // 7    xxxxxxx
 // 5     xxxxx
 // 1       x
-std::vector<Point> getCirclePoints(float x, float y, float resourceIncomeDistance)
+std::vector<Point> GetCirclePoints(float x, float y, float resource_income_distance)
 {
 	std::vector<Point> result;
-	float cellSize = resourceIncomeDistance / 6;
+	float cell_size = resource_income_distance / 6;
 
-	result.emplace_back(x, y + 6 * cellSize);
-	result.emplace_back(x, y - 6 * cellSize);
+	result.emplace_back(x, y + 6 * cell_size);
+	result.emplace_back(x, y - 6 * cell_size);
 
-	auto fillRange = [&result, x, y, cellSize](int range, int step)
+	auto FillRange = [&result, x, y, cell_size](int range, int step)
 	{
 		for (int iter = -range; iter <= range; ++iter)
 		{
-			result.emplace_back(x + iter * cellSize, y + step * cellSize);
-			if (step != 0) result.emplace_back(x + iter * cellSize, y - step * cellSize);
+			result.emplace_back(x + iter * cell_size, y + step * cell_size);
+			if (step != 0) result.emplace_back(x + iter * cell_size, y - step * cell_size);
 		}
 	};
 
-	fillRange(2, 5);
-	fillRange(3, 4);
-	fillRange(4, 3);
-	fillRange(5, 2);
-	fillRange(5, 1);
-	fillRange(6, 0);
-	auto centerIter = std::find(result.begin(), result.end(), std::pair<float, float>(x, y));
-	if (centerIter != result.end())
-		result.erase(centerIter);
+	FillRange(2, 5);
+	FillRange(3, 4);
+	FillRange(4, 3);
+	FillRange(5, 2);
+	FillRange(5, 1);
+	FillRange(6, 0);
+	auto center_iter = std::find(result.begin(), result.end(), std::pair<float, float>(x, y));
+	if (center_iter != result.end())
+		result.erase(center_iter);
 
 	return result;
 };
 
-float AResourceBuilding::resourceBuildingIncome()
+float AResourceBuilding::ResourceBuildingIncome()
 {
-	auto incomeAreaPoints = getCirclePoints(GetActorLocation().X, GetActorLocation().Y, incomeAreaRadius);
+	auto income_area_points = GetCirclePoints(GetActorLocation().X, GetActorLocation().Y, income_area_radius);
 
-	std::vector<Point> wrongPoints;
+	std::vector<Point> wrong_points;
 
 	// check if income points is in unreachable location
-	for (const auto &point : incomeAreaPoints)
+	for (const auto &point : income_area_points)
 	{
 		FVector start = GetActorLocation();
 		FVector end(point.first, point.second, start.Z);
@@ -194,66 +194,66 @@ float AResourceBuilding::resourceBuildingIncome()
 		if (!world)
 			continue;
 		
-		auto NavSystem = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
-		if (!NavSystem)
+		auto nav_system = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
+		if (!nav_system)
 			continue;
 		
-		const ANavigationData* NavData = NavSystem->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
-		if (!NavData)
+		const ANavigationData* nav_data = nav_system->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
+		if (!nav_data)
 			continue;
 		
-		FPathFindingQuery query(NavSystem, *NavData, GetActorLocation(), end);
-		if (!Cast<UNavigationSystemV1>(NavSystem)->TestPathSync(query))
+		FPathFindingQuery query(nav_system, *nav_data, GetActorLocation(), end);
+		if (!Cast<UNavigationSystemV1>(nav_system)->TestPathSync(query))
 		{
-			if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
+			if (std::find(wrong_points.begin(), wrong_points.end(), point) == wrong_points.end())
 			{
-				wrongPoints.emplace_back(point);
+				wrong_points.emplace_back(point);
 				continue;
 			}
 		}
 	}
 
 	// check income based on another rb
-	TArray<FHitResult> OutHits;
+	TArray<FHitResult> out_hits;
 	FQuat rot = FQuat::Identity;
-	FCollisionObjectQueryParams ObjectQueryParams;
-	ObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
-	FCollisionShape CollisionShape = FCollisionShape::MakeSphere(incomeAreaRadius*2);
+	FCollisionObjectQueryParams object_query_params;
+	object_query_params.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	FCollisionShape collision_shape = FCollisionShape::MakeSphere(income_area_radius*2);
 
-	GetWorld()->SweepMultiByObjectType(OutHits, GetActorLocation(), GetActorLocation() + incomeAreaRadius*2, rot, ObjectQueryParams, CollisionShape, {});
+	GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius*2, rot, object_query_params, collision_shape, {});
 
-	for (const auto& hit : OutHits)
+	for (const auto& hit : out_hits)
 	{
 		auto actor = hit.Actor.Get();
 		if (!Cast<AResourceBuilding>(actor))
 			continue;
 
-		float distanceToAnotherRb = GetDistanceTo(hit.Actor.Get());
-		if (distanceToAnotherRb < 1) // hitted by himself
+		float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
+		if (distance_to_another_rb < 1) // hitted by himself
 			continue;
-		if (distanceToAnotherRb > incomeAreaRadius*2) // income circles do not overlap each other
+		if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
 			continue;
 
-		for (const auto &point : incomeAreaPoints)
+		for (const auto &point : income_area_points)
 		{
-			auto rbLocation = hit.Actor.Get()->GetActorLocation();
-			if (getDistance(point, Point(rbLocation.X, rbLocation.Y)) < incomeAreaRadius)
-				if (std::find(wrongPoints.begin(), wrongPoints.end(), point) == wrongPoints.end())
+			auto rb_location = hit.Actor.Get()->GetActorLocation();
+			if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
+				if (std::find(wrong_points.begin(), wrong_points.end(), point) == wrong_points.end())
 				{
-					wrongPoints.emplace_back(point);
+					wrong_points.emplace_back(point);
 					continue;
 				}
 		}
 	}
-	float income = incomeAreaPoints.size() - wrongPoints.size();
+	float income = income_area_points.size() - wrong_points.size();
 
 	return income;
 }
 
-FVector AResourceBuilding::currentLocation()
+FVector AResourceBuilding::CurrentLocation()
 {
-	FHitResult result;
-	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, result);
-	return result.Location;
+	FHitResult hit_result;
+	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, hit_result);
+	return hit_result.Location;
 }
 

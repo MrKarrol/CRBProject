@@ -17,23 +17,23 @@ ACRBProjectPlayerController::ACRBProjectPlayerController()
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
 }
 
-void ACRBProjectPlayerController::AttachRBToController(TScriptInterface<IResourceBuildingInterface> newRb)
+void ACRBProjectPlayerController::AttachRbToController(TScriptInterface<IResourceBuildingInterface> rb)
 {
 	// preparation
-	UntargetRB();
+	UnselectRb();
 
 	TArray<AActor*> rbs;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AResourceBuilding::StaticClass(), rbs);
 	for (auto resourceBuilding : rbs)
 	{
-		Cast<AResourceBuilding>(resourceBuilding)->showIncomeArea(true);
+		Cast<AResourceBuilding>(resourceBuilding)->ShowIncomeArea(true);
 	}
 
 	// creating
-	rb = newRb;
-	rb->setPlaced(false);
+	m_AttachedRb = rb;
+	m_AttachedRb->SetPlaced(false);
 
-	mIsRBAttached = true;
+	m_IsRbAttached = true;
 }
 
 void ACRBProjectPlayerController::PlayerTick(float DeltaTime)
@@ -122,13 +122,13 @@ void ACRBProjectPlayerController::SetNewMoveDestination(const FVector DestLocati
 	}
 }
 
-void ACRBProjectPlayerController::UntargetRB()
+void ACRBProjectPlayerController::UnselectRb()
 {
-	if (mIsRBTargeted)
+	if (m_IsRbSelected)
 	{
-		mIsRBTargeted = false;
-		targetedRb->untargetRB();
-		targetedRb = nullptr;
+		m_IsRbSelected = false;
+		m_SelectedRb->Unselect();
+		m_SelectedRb = nullptr;
 	}
 }
 
@@ -136,38 +136,38 @@ void ACRBProjectPlayerController::UntargetRB()
 void ACRBProjectPlayerController::OnActionRequested()
 {
 	// if resource building attached
-	if (mIsRBAttached)
+	if (m_IsRbAttached)
 	{
-		rb->setPlaced(true);
+		m_AttachedRb->SetPlaced(true);
 
 		TArray<AActor*> rbs;
 		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AResourceBuilding::StaticClass(), rbs);
 		for (auto resourceBuilding : rbs)
 		{
-			Cast<AResourceBuilding>(resourceBuilding)->showIncomeArea(false);
+			Cast<AResourceBuilding>(resourceBuilding)->ShowIncomeArea(false);
 		}
 
-		mIsRBTargeted = true;
-		targetedRb = rb;
-		targetedRb->targetRB();
+		m_IsRbSelected = true;
+		m_SelectedRb = m_AttachedRb;
+		m_SelectedRb->Select();
 	}
 	else // check if resource building clicked
 	{
-		FHitResult result;
-		GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, result);
-		if (Cast<IResourceBuildingInterface>(result.Actor.Get()))
+		FHitResult hit_result;
+		GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, hit_result);
+		if (Cast<IResourceBuildingInterface>(hit_result.Actor.Get()))
 		{
-			if (mIsRBTargeted)
-				targetedRb->untargetRB();
+			if (m_IsRbSelected)
+				m_SelectedRb->Unselect();
 			else
-				mIsRBTargeted = true;
+				m_IsRbSelected = true;
 
-			targetedRb = result.Actor.Get();
-			targetedRb->targetRB();
+			m_SelectedRb = hit_result.Actor.Get();
+			m_SelectedRb->Select();
 		}
 		else // request to move character
 		{
-			UntargetRB();
+			UnselectRb();
 			OnSetDestinationPressed();
 		}
 	}
@@ -175,10 +175,10 @@ void ACRBProjectPlayerController::OnActionRequested()
 
 void ACRBProjectPlayerController::OnActionDisbound()
 {
-	if (mIsRBAttached)
+	if (m_IsRbAttached)
 	{
-		mIsRBAttached = false;
-		rb = nullptr;
+		m_IsRbAttached = false;
+		m_AttachedRb = nullptr;
 	}
 	else // request to stop moving
 	{

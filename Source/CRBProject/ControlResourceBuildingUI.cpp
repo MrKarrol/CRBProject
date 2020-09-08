@@ -4,12 +4,12 @@
 #include "ControlResourceBuildingUI.h"
 
 
-void UControlResourceBuildingUI::attachRbToWidget(TScriptInterface<IResourceBuildingInterface> newRb)
+void UControlResourceBuildingUI::AttachRbToWidget(TScriptInterface<IResourceBuildingInterface> rb)
 {
-	rb = newRb;
+	m_Rb = rb;
 }
 
-void UControlResourceBuildingUI::destroyRB()
+void UControlResourceBuildingUI::DestroyRb()
 {
-	rb->destroyRB();
+	m_Rb->DestroyResourceBuilding();
 }
