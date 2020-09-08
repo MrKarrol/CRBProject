@@ -176,7 +176,7 @@ std::vector<Point> GetCirclePoints(float x, float y, float resource_income_dista
 	return result;
 };
 
-float AResourceBuilding::ResourceBuildingIncome()
+float AResourceBuilding::ResourceBuildingIncome() const
 {
 	auto income_area_points = GetCirclePoints(GetActorLocation().X, GetActorLocation().Y, income_area_radius);
 
@@ -250,7 +250,7 @@ float AResourceBuilding::ResourceBuildingIncome()
 	return income;
 }
 
-FVector AResourceBuilding::CurrentLocation()
+FVector AResourceBuilding::CurrentLocation() const
 {
 	FHitResult hit_result;
 	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursorByChannel({}, false, hit_result);

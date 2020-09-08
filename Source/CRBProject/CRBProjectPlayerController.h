@@ -7,6 +7,7 @@
 #include "ResourceBuildingInterface.h"
 #include "CRBProjectPlayerController.generated.h"
 
+
 UCLASS()
 class ACRBProjectPlayerController : public APlayerController
 {

@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Components/TextRenderComponent.h"
 #include "ResourceBuildingInterface.h"
-#include "NavigationData.h"
 #include "ResourceBuilding.generated.h"
 
 UCLASS()
@@ -20,24 +19,23 @@ public:
 	// Sets default values for this actor's properties
 	AResourceBuilding();
 
-
-	bool IsPlaced() const override;
-
-	void SetPlaced(bool isPlaced) override;
-
-	bool IsSelected() const override;
-	void Select() override;
-	void Unselect() override;
-
-	void DestroyResourceBuilding() override;
-
-	void ShowIncomeArea(bool show);
-
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSelected();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnUnselected();
+
+	void ShowIncomeArea(bool show);
+
+	virtual bool IsPlaced() const override;
+
+	virtual void SetPlaced(bool isPlaced) override;
+
+	virtual bool IsSelected() const override;
+	virtual void Select() override;
+	virtual void Unselect() override;
+
+	virtual void DestroyResourceBuilding() override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -51,9 +49,11 @@ public:
 	UPROPERTY(EditInstanceOnly)
 	USceneComponent* scene_root;
 
-	UPROPERTY(EditInstanceOnly) UStaticMeshComponent *cube;
+	UPROPERTY(EditInstanceOnly) 
+	UStaticMeshComponent *cube;
 
-	UPROPERTY(VisibleAnywhere) UTextRenderComponent *income_text;
+	UPROPERTY(VisibleAnywhere) 
+	UTextRenderComponent *income_text;
 
 	/** A decal that projects to the cursor location. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -62,8 +62,8 @@ public:
 	UPROPERTY(VisibleAnywhere) float income_area_radius = 350;
 
 private:
-	UFUNCTION() FVector CurrentLocation();
-	UFUNCTION() float ResourceBuildingIncome();
+	UFUNCTION() FVector CurrentLocation() const;
+	UFUNCTION() float ResourceBuildingIncome() const;
 
 private:
 	bool m_PostPlacingActionsApplied = false;
