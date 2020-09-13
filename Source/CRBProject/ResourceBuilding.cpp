@@ -7,9 +7,6 @@
 #include "DrawDebugHelpers.h"
 #include "NavigationSystem.h"
 
-#include <vector>
-
-
 // Sets default values
 AResourceBuilding::AResourceBuilding()
 {
@@ -146,20 +143,20 @@ double GetDistance(const Point &a, const Point &b)
 // 7    xxxxxxx
 // 5     xxxxx
 // 1       x
-std::vector<Point> GetCirclePoints(float x, float y, float resource_income_distance)
+TArray<Point> GetCirclePoints(float x, float y, float resource_income_distance)
 {
-	std::vector<Point> result;
+	TArray<Point> result;
 	float cell_size = resource_income_distance / 6;
 
-	result.emplace_back(x, y + 6 * cell_size);
-	result.emplace_back(x, y - 6 * cell_size);
+	result.Emplace(x, y + 6 * cell_size);
+	result.Emplace(x, y - 6 * cell_size);
 
 	auto FillRange = [&result, x, y, cell_size](int range, int step)
 	{
 		for (int iter = -range; iter <= range; ++iter)
 		{
-			result.emplace_back(x + iter * cell_size, y + step * cell_size);
-			if (step != 0) result.emplace_back(x + iter * cell_size, y - step * cell_size);
+			result.Emplace(x + iter * cell_size, y + step * cell_size);
+			if (step != 0) result.Emplace(x + iter * cell_size, y - step * cell_size);
 		}
 	};
 
@@ -169,9 +166,9 @@ std::vector<Point> GetCirclePoints(float x, float y, float resource_income_dista
 	FillRange(5, 2);
 	FillRange(5, 1);
 	FillRange(6, 0);
-	auto center_iter = std::find(result.begin(), result.end(), std::pair<float, float>(x, y));
-	if (center_iter != result.end())
-		result.erase(center_iter);
+	auto center_iter = result.Find(std::pair<float, float>(x, y));
+	if (center_iter != INDEX_NONE)
+		result.RemoveAt(center_iter);
 
 	return result;
 };
@@ -180,7 +177,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 {
 	auto income_area_points = GetCirclePoints(GetActorLocation().X, GetActorLocation().Y, income_area_radius);
 
-	std::vector<Point> wrong_points;
+	TArray<Point> wrong_points;
 
 	// check if income points is in unreachable location
 	for (const auto &point : income_area_points)
@@ -205,9 +202,9 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		FPathFindingQuery query(nav_system, *nav_data, GetActorLocation(), end);
 		if (!Cast<UNavigationSystemV1>(nav_system)->TestPathSync(query))
 		{
-			if (std::find(wrong_points.begin(), wrong_points.end(), point) == wrong_points.end())
+			if (wrong_points.Find(point) == INDEX_NONE)
 			{
-				wrong_points.emplace_back(point);
+				wrong_points.Emplace(point);
 				continue;
 			}
 		}
@@ -238,14 +235,14 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		{
 			auto rb_location = hit.Actor.Get()->GetActorLocation();
 			if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
-				if (std::find(wrong_points.begin(), wrong_points.end(), point) == wrong_points.end())
+				if (wrong_points.Find(point) == INDEX_NONE)
 				{
-					wrong_points.emplace_back(point);
+					wrong_points.Emplace(point);
 					continue;
 				}
 		}
 	}
-	float income = income_area_points.size() - wrong_points.size();
+	float income = income_area_points.Num() - wrong_points.Num();
 
 	return income;
 }
