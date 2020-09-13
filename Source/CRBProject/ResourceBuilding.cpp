@@ -173,33 +173,44 @@ TArray<Point> GetCirclePoints(float x, float y, float resource_income_distance)
 	return result;
 };
 
+
 float AResourceBuilding::ResourceBuildingIncome() const
 {
 	auto income_area_points = GetCirclePoints(GetActorLocation().X, GetActorLocation().Y, income_area_radius);
 
+	auto world = GetWorld();
+	if (!world)
+		return 0;
+
+	auto nav_system = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
+	if (!nav_system)
+		return 0;
+
+	const ANavigationData* nav_data = nav_system->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
+	if (!nav_data)
+		return 0;
+
+	FVector start = GetActorLocation();
+
+	// find another resource buildings
+	TArray<FHitResult> out_hits;
+	FQuat rot = FQuat::Identity;
+	FCollisionObjectQueryParams object_query_params;
+	object_query_params.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	FCollisionShape collision_shape = FCollisionShape::MakeSphere(income_area_radius * 2);
+
+	GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius * 2, rot, object_query_params, collision_shape, {});
+
+
 	TArray<Point> wrong_points;
 
-	// check if income points is in unreachable location
 	for (const auto &point : income_area_points)
 	{
-		FVector start = GetActorLocation();
 		FVector end(point.first, point.second, start.Z);
 		/*if (! mIsPlaced)
 			DrawDebugPoint(GetWorld(), end, 10.f, FColor::Red);*/
 
-		auto world = GetWorld();
-		if (!world)
-			continue;
-		
-		auto nav_system = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
-		if (!nav_system)
-			continue;
-		
-		const ANavigationData* nav_data = nav_system->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
-		if (!nav_data)
-			continue;
-		
-		FPathFindingQuery query(nav_system, *nav_data, GetActorLocation(), end);
+		FPathFindingQuery query(nav_system, *nav_data, start, end);
 		if (!Cast<UNavigationSystemV1>(nav_system)->TestPathSync(query))
 		{
 			if (wrong_points.Find(point) == INDEX_NONE)
@@ -210,15 +221,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		}
 	}
 
-	// check income based on another rb
-	TArray<FHitResult> out_hits;
-	FQuat rot = FQuat::Identity;
-	FCollisionObjectQueryParams object_query_params;
-	object_query_params.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
-	FCollisionShape collision_shape = FCollisionShape::MakeSphere(income_area_radius*2);
-
-	GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius*2, rot, object_query_params, collision_shape, {});
-
+	
 	for (const auto& hit : out_hits)
 	{
 		auto actor = hit.Actor.Get();
