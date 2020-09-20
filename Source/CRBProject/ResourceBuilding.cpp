@@ -6,26 +6,30 @@
 #include "Components/DecalComponent.h"
 #include "DrawDebugHelpers.h"
 #include "NavigationSystem.h"
+#include "ResourceBuildingNavArea.h"
+
 
 // Sets default values
 AResourceBuilding::AResourceBuilding()
 {
 	// In your constructor
-	scene_root = CreateDefaultSubobject<USceneComponent>(TEXT("Scene Root"));
+	scene_root = CreateDefaultSubobject<USceneComponent>(TEXT("scene_root"));
 	RootComponent = scene_root;
 
-	cube = CreateDefaultSubobject<UStaticMeshComponent>("Cube");
+	cube = CreateDefaultSubobject<UStaticMeshComponent>("cube");
 	cube->SetupAttachment(RootComponent);
 	cube->SetRelativeLocation(FVector(0, 0, 0));
 	
 	cube->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Create a decal in the world to show the cursor's location
-	income_area_circle = CreateDefaultSubobject<UDecalComponent>("CursorToWorld");
+	income_area_circle = CreateDefaultSubobject<UDecalComponent>("income_area_circle");
 	income_area_circle->SetupAttachment(RootComponent);
 	income_area_circle->SetRelativeLocation(FVector(0, 0, 0));
 
-	income_text = CreateDefaultSubobject<UTextRenderComponent>("overlapPercents");
+	income_area = CreateDefaultSubobject<UResourceBuildingNavModComponent>("income_area");
+
+	income_text = CreateDefaultSubobject<UTextRenderComponent>("income_text");
 	income_text->SetupAttachment(RootComponent);
 
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -177,6 +181,8 @@ TArray<Point> GetCirclePoints(float x, float y, float resource_income_distance)
 float AResourceBuilding::ResourceBuildingIncome() const
 {
 	auto income_area_points = GetCirclePoints(GetActorLocation().X, GetActorLocation().Y, income_area_radius);
+	for (auto point : income_area_points)
+		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);
 
 	auto world = GetWorld();
 	if (!world)
