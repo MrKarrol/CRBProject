@@ -177,6 +177,29 @@ TArray<Point> GetCirclePoints(float x, float y, float resource_income_distance)
 	return result;
 };
 
+// Acceptable angles - integer obtained by dividing 90 on some integer, i.e. 1, 5, 10 etc.
+TArray<Point> GetCirclePoints2(const Point &center, const float resource_income_distance, const int linearDepth = 10, const int addedAngle = 15)
+{
+	TArray<Point> result;
+	
+	const float step = resource_income_distance / linearDepth;
+	for (int depth = 0; depth < linearDepth; ++depth)
+	{
+		const float radius = resource_income_distance - step * depth;
+		for (int angle = 0; angle < 90; angle += addedAngle)
+		{
+			const float xInc = radius * FMath::Sin(90 - angle);
+			const float yInc = radius * FMath::Sin(angle);
+
+			result.Emplace(center.first + xInc, center.second + yInc);
+			result.Emplace(center.first + yInc, center.second - xInc);
+			result.Emplace(center.first - xInc, center.second - yInc);
+			result.Emplace(center.first - yInc, center.second + xInc);
+		}
+	}
+		
+	return result;
+}
 
 float AResourceBuilding::ResourceBuildingIncome() const
 {
@@ -251,7 +274,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 				}
 		}
 	}
-	float income = income_area_points.Num() - wrong_points.Num();
+	float income = (income_area_points.Num() - wrong_points.Num()) / income_area_points.Num();
 
 	return income;
 }
