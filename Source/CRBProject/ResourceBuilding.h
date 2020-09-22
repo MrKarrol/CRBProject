@@ -48,13 +48,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(VisibleAnywhere)
 	USceneComponent* scene_root;
 
-	UPROPERTY(EditInstanceOnly) 
+	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *cube;
 
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(VisibleAnywhere)
 	UResourceBuildingNavModComponent *income_area;
 
 	UPROPERTY(VisibleAnywhere) 
@@ -64,7 +64,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UDecalComponent* income_area_circle;
 
-	UPROPERTY(VisibleAnywhere) float income_area_radius = 350;
+	UPROPERTY(EditDefaultsOnly) float income_area_radius = 400;
 
 private:
 	UFUNCTION() FVector CurrentLocation() const;

@@ -201,11 +201,40 @@ TArray<Point> GetCirclePoints2(const Point &center, const float resource_income_
 	return result;
 }
 
+TArray<Point> GetCirclePoints3(const Point &center, const float resource_income_distance, const int depth = 20)
+{
+	TArray<Point> result;
+
+	const float step = resource_income_distance / depth;
+	for (int depth_index = 0; depth_index < depth; ++depth_index)
+	{
+		const float y = center.second + step * depth_index;
+		const float y_minus = center.second - step * depth_index;
+		const float x = FMath::Sqrt(FMath::Pow(resource_income_distance, 2) - FMath::Pow(step * depth_index, 2)) + center.first;
+
+		int step_inc = 1;
+		while (center.first + step * step_inc < x)
+		{
+			result.Emplace(center.first + step_inc * step, y);
+			result.Emplace(center.first - step_inc * step, y);
+			if (depth_index != 0)
+			{
+				result.Emplace(center.first + step_inc * step, y_minus);
+				result.Emplace(center.first - step_inc * step, y_minus);
+			}
+			++step_inc;
+		}
+	}
+
+	return result;
+}
+
 float AResourceBuilding::ResourceBuildingIncome() const
 {
-	auto income_area_points = GetCirclePoints(GetActorLocation().X, GetActorLocation().Y, income_area_radius);
-	for (auto point : income_area_points)
-		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);
+	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius);
+	/*for (auto point : income_area_points)
+		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
+
 
 	auto world = GetWorld();
 	if (!world)
@@ -274,7 +303,9 @@ float AResourceBuilding::ResourceBuildingIncome() const
 				}
 		}
 	}
-	float income = (income_area_points.Num() - wrong_points.Num()) / income_area_points.Num();
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("good: %d, wrong: %d"), income_area_points.Num(), wrong_points.Num()));
+
+	float income = float(income_area_points.Num() - wrong_points.Num()) / income_area_points.Num() * 100;
 
 	return income;
 }
