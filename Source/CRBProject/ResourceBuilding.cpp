@@ -27,8 +27,8 @@ AResourceBuilding::AResourceBuilding()
 	income_area_circle->SetupAttachment(RootComponent);
 	income_area_circle->SetRelativeLocation(FVector(0, 0, 0));
 
-	income_area = CreateDefaultSubobject<UResourceBuildingNavModComponent>("income_area");
-	income_area->SetAreaClass(UResourceBuildingNavArea::StaticClass());
+	//income_area = CreateDefaultSubobject<UResourceBuildingNavModComponent>("income_area");
+	
 
 	income_text = CreateDefaultSubobject<UTextRenderComponent>("income_text");
 	income_text->SetupAttachment(RootComponent);
@@ -103,7 +103,9 @@ void AResourceBuilding::Tick(float DeltaTime)
 		if (! m_PostPlacingActionsApplied)
 		{
 			cube->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-
+			// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("area: %d"), income_area->AreaClass));
+			//income_area->SetAreaClass(UResourceBuildingNavArea::StaticClass());
+			// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("area new: %d"), income_area->AreaClass));
 			m_PostPlacingActionsApplied = true;
 		}
 		// some logic
@@ -134,73 +136,6 @@ double GetDistance(const Point &a, const Point &b)
 	return result;
 };
 
-// getting income circle points like so (on paper looks better))
-// 1       x
-// 5     xxxxx
-// 7    xxxxxxx
-// 9   xxxxxxxxx
-//11  xxxxxxxxxxx
-//11  xxxxxxxxxxx
-//12 xxxxxx xxxxxx
-//11  xxxxxxxxxxx
-//11  xxxxxxxxxxx
-// 9   xxxxxxxxx
-// 7    xxxxxxx
-// 5     xxxxx
-// 1       x
-TArray<Point> GetCirclePoints(float x, float y, float resource_income_distance)
-{
-	TArray<Point> result;
-	float cell_size = resource_income_distance / 6;
-
-	result.Emplace(x, y + 6 * cell_size);
-	result.Emplace(x, y - 6 * cell_size);
-
-	auto FillRange = [&result, x, y, cell_size](int range, int step)
-	{
-		for (int iter = -range; iter <= range; ++iter)
-		{
-			result.Emplace(x + iter * cell_size, y + step * cell_size);
-			if (step != 0) result.Emplace(x + iter * cell_size, y - step * cell_size);
-		}
-	};
-
-	FillRange(2, 5);
-	FillRange(3, 4);
-	FillRange(4, 3);
-	FillRange(5, 2);
-	FillRange(5, 1);
-	FillRange(6, 0);
-	auto center_iter = result.Find(std::pair<float, float>(x, y));
-	if (center_iter != INDEX_NONE)
-		result.RemoveAt(center_iter);
-
-	return result;
-};
-
-// Acceptable angles - integer obtained by dividing 90 on some integer, i.e. 1, 5, 10 etc.
-TArray<Point> GetCirclePoints2(const Point &center, const float resource_income_distance, const int linearDepth = 10, const int addedAngle = 15)
-{
-	TArray<Point> result;
-	
-	const float step = resource_income_distance / linearDepth;
-	for (int depth = 0; depth < linearDepth; ++depth)
-	{
-		const float radius = resource_income_distance - step * depth;
-		for (int angle = 0; angle < 90; angle += addedAngle)
-		{
-			const float xInc = radius * FMath::Sin(90 - angle);
-			const float yInc = radius * FMath::Sin(angle);
-
-			result.Emplace(center.first + xInc, center.second + yInc);
-			result.Emplace(center.first + yInc, center.second - xInc);
-			result.Emplace(center.first - xInc, center.second - yInc);
-			result.Emplace(center.first - yInc, center.second + xInc);
-		}
-	}
-		
-	return result;
-}
 
 TArray<Point> GetCirclePoints3(const Point &center, const float resource_income_distance, const int depth = 20)
 {
@@ -237,11 +172,11 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
 
 
-	auto world = GetWorld();
+	const auto world = GetWorld();
 	if (!world)
 		return 0;
 
-	auto nav_system = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
+	const auto nav_system = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
 	if (!nav_system)
 		return 0;
 
@@ -249,9 +184,10 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	if (!nav_data)
 		return 0;
 
-	auto filter = UResourceBNavigationQueryFilter::GetQueryFilter<UResourceBNavigationQueryFilter>(*nav_data, UResourceBNavigationQueryFilter::StaticClass());
+	const auto filter = UResourceBNavigationQueryFilter::GetQueryFilter<UResourceBNavigationQueryFilter>(*nav_data);
 	
-	
+	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("num: %d"), filter->GetExcludeFlags()));
+
 	FVector start = GetActorLocation();
 
 	// find another resource buildings
@@ -271,7 +207,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		FVector end(point.first, point.second, start.Z);
 
 		FPathFindingQuery query(nav_system, *nav_data, start, end, filter);
-		if (!Cast<UNavigationSystemV1>(nav_system)->TestPathSync(query))
+		if (!nav_system->TestPathSync(query))
 		{
 			if (wrong_points.Find(point) == INDEX_NONE)
 			{

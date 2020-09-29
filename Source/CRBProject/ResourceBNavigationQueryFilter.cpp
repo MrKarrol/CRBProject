@@ -5,6 +5,7 @@
 #include "ResourceBuildingNavArea.h"
 
 UResourceBNavigationQueryFilter::UResourceBNavigationQueryFilter()
+	: UNavigationQueryFilter()
 {
 	AddExcludedArea(UResourceBuildingNavArea::StaticClass());
 }
