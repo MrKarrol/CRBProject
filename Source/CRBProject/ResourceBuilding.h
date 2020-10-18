@@ -62,6 +62,8 @@ public:
 	class UDecalComponent* income_area_circle;
 
 	UPROPERTY(EditDefaultsOnly) float income_area_radius = 400;
+	// more number -> more points in income area
+	UPROPERTY(EditDefaultsOnly) float income_algorithm_depth = 20;
 
 private:
 	UFUNCTION() FVector CurrentLocation() const;

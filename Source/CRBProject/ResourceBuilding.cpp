@@ -163,7 +163,7 @@ TArray<Point> GetCirclePoints3(const Point &center, const float resource_income_
 
 float AResourceBuilding::ResourceBuildingIncome() const
 {
-	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius);
+	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius, income_algorithm_depth);
 	/*for (auto point : income_area_points)
 		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
 	
@@ -178,6 +178,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius * 2, rot, object_query_params, collision_shape, {});
 	}
 	
+	// finding unreachable points caused by another resource buildings
 	TArray<FBox> unreachable_areas;
 	for (const auto& hit : out_hits)
 	{
@@ -238,6 +239,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		} while (!IsPointReachable(start));
 	}
 
+	// remove points by collision with solid objects
 	auto income_area_points_initial_size = income_area_points.Num();
 	{
 		auto income_area_points_dub = income_area_points;
@@ -254,6 +256,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		income_area_points = std::move(income_area_points_dub);
 	}
 	
+	// remove points by income areas intersection
 	for (const auto& hit : out_hits)
 	{
 		auto actor = hit.Actor.Get();
@@ -280,7 +283,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	else
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num()));
 */
-	//float income = float(income_area_points.Num() - wrong_points.Num()) / income_area_points.Num() * 100;
+
 	float income = float(income_area_points.Num()) / income_area_points_initial_size * 100;
 
 	return income;
