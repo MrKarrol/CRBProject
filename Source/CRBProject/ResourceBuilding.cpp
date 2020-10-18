@@ -161,9 +161,35 @@ TArray<Point> GetCirclePoints3(const Point &center, const float resource_income_
 	return result;
 }
 
+FBox MakeBox(const AActor *actor)
+{
+	FVector origin;
+	FVector boxExtent;
+	actor->GetActorBounds(true, origin, boxExtent, true);
+	boxExtent += FVector(4, 4, 4);
+	FBox box(origin - boxExtent, origin + boxExtent);
+	return std::move(box);
+}
+
 float AResourceBuilding::ResourceBuildingIncome() const
 {
 	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius, income_algorithm_depth);
+	// removing central points - points that is inside this object
+	{
+		auto box = MakeBox(this);
+
+		auto income_area_points_dub = income_area_points;
+		for (const auto &point : income_area_points)
+		{
+			FVector temp = FVector(point.first, point.second, box.GetCenter().Z);
+			if (FMath::PointBoxIntersection(temp, box))
+				income_area_points_dub.Remove(point);
+		}
+			
+		income_area_points = std::move(income_area_points_dub);
+	}
+	auto income_area_points_initial_size = income_area_points.Num();
+
 	/*for (auto point : income_area_points)
 		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
 	
@@ -190,16 +216,10 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		if (distance_to_another_rb > income_area_radius * 2) // income circles do not overlap each other
 			continue;
 
-		FVector origin;
-		FVector boxExtent;
-		actor->GetActorBounds(true, origin, boxExtent, true);
-		boxExtent += FVector(4, 4, 4);
-		FBox box(origin - boxExtent, origin + boxExtent);
-
-		unreachable_areas.Emplace(box);
+		unreachable_areas.Emplace(MakeBox(actor));
 	}
 
-	auto IsPointReachable = [unreachable_areas](const FVector &point)
+	auto IsPointReachable = [this, unreachable_areas](const FVector &point, float z_limit)
 	{
 		for (const auto &box : unreachable_areas)
 			if (FMath::PointBoxIntersection(point, box))
@@ -207,6 +227,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		return true;
 	};
 
+	// remove points by collision with solid objects
 	const auto world = GetWorld();
 	if (!world)
 		return 0;
@@ -221,27 +242,22 @@ float AResourceBuilding::ResourceBuildingIncome() const
 
 	FVector start;
 	{
+		// getting start point
 		FNavLocation start_location;
 
-		FVector origin;
-		FVector boxExtent;
+		FVector origin, boxExtent;
 		GetActorBounds(true, origin, boxExtent, true);
-		boxExtent += FVector(4, 4, 4);
+		
 
-		//int times = 0;
 		do 
 		{
 			nav_data->GetRandomPointInNavigableRadius(GetActorLocation(), income_area_radius, start_location);
 			start = start_location.Location;
-			/*times++;
-			if (times > 20)
-				break;*/
-		} while (!IsPointReachable(start));
+		} while (!IsPointReachable(start, boxExtent.Z));
 	}
-
-	// remove points by collision with solid objects
-	auto income_area_points_initial_size = income_area_points.Num();
+	
 	{
+		
 		auto income_area_points_dub = income_area_points;
 		for (const auto &point : income_area_points)
 		{
@@ -278,11 +294,11 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		}
 		income_area_points = std::move(income_area_points_dub);
 	}
-	/*if (income_area_points.Num() < income_area_points_initial_size / 2)
+	if (income_area_points.Num() < income_area_points_initial_size / 2)
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d, start: %s"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num(), *start.ToString()));
 	else
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num()));
-*/
+
 
 	float income = float(income_area_points.Num()) / income_area_points_initial_size * 100;
 
