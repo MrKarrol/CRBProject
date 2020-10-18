@@ -192,71 +192,50 @@ float AResourceBuilding::ResourceBuildingIncome() const
 
 
 	TArray<Point> wrong_points;
-
-	for (const auto &point : income_area_points)
+	auto income_area_points_size = income_area_points.Num();
 	{
-		FVector end(point.first, point.second, start.Z);
-
-		FPathFindingQuery query(nav_system, *nav_data, start, end);
-		if (!nav_system->TestPathSync(query))
+		auto income_area_points_dub = income_area_points;
+		for (const auto &point : income_area_points)
 		{
-			if (wrong_points.Find(point) == INDEX_NONE)
+			FVector end(point.first, point.second, start.Z);
+
+			FPathFindingQuery query(nav_system, *nav_data, start, end);
+			if (!nav_system->TestPathSync(query))
 			{
-				wrong_points.Emplace(point);
-				continue;
+				income_area_points_dub.Remove(point);
 			}
 		}
+		income_area_points = std::move(income_area_points_dub);
 	}
+	
 
 	
-	//for (const auto& hit : out_hits)
-	//{
-	//	auto actor = hit.Actor.Get();
-	//	if (!Cast<AResourceBuilding>(actor))
-	//		continue;
+	for (const auto& hit : out_hits)
+	{
+		auto actor = hit.Actor.Get();
+		if (!Cast<AResourceBuilding>(actor))
+			continue;
 
-	//	const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
-	//	if (distance_to_another_rb < 1) // hitted by himself
-	//		continue;
-	//	if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
-	//		continue;
+		const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
+		if (distance_to_another_rb < 1) // hitted by himself
+			continue;
+		if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
+			continue;
 
-	//	for (const auto &point : income_area_points)
-	//	{
-	//		auto rb_location = hit.Actor.Get()->GetActorLocation();
-	//		if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
-	//			if (wrong_points.Find(point) == INDEX_NONE)
-	//			{
-	//				wrong_points.Emplace(point);
-	//				continue;
-	//			}
-	//	}
-	//}for (const auto& hit : out_hits)
-	//{
-	//	auto actor = hit.Actor.Get();
-	//	if (!Cast<AResourceBuilding>(actor))
-	//		continue;
+		auto income_area_points_dub = income_area_points;
+		for (const auto &point : income_area_points)
+		{
+			auto rb_location = hit.Actor.Get()->GetActorLocation();
+			if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
+				income_area_points_dub.Remove(point);
+		}
+		income_area_points = std::move(income_area_points_dub);
+	}
 
-	//	const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
-	//	if (distance_to_another_rb < 1) // hitted by himself
-	//		continue;
-	//	if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
-	//		continue;
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("income: %f, good: %d, wrong: %d"), m_CurrentIncome, income_area_points.Num(), income_area_points_size - income_area_points.Num()));
 
-	//	for (const auto &point : income_area_points)
-	//	{
-	//		auto rb_location = hit.Actor.Get()->GetActorLocation();
-	//		if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
-	//			if (wrong_points.Find(point) == INDEX_NONE)
-	//			{
-	//				wrong_points.Emplace(point);
-	//				continue;
-	//			}
-	//	}
-	//}
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("income: %f, good: %d, wrong: %d"), m_CurrentIncome, income_area_points.Num(), wrong_points.Num()));
-
-	float income = float(income_area_points.Num() - wrong_points.Num()) / income_area_points.Num() * 100;
+	//float income = float(income_area_points.Num() - wrong_points.Num()) / income_area_points.Num() * 100;
+	float income = float(income_area_points.Num()) / income_area_points_size * 100;
 
 	return income;
 }
