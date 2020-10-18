@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Components/TextRenderComponent.h"
 #include "ResourceBuildingInterface.h"
-#include "ResourceBuildingNavModComponent.h"
 
 #include "ResourceBuilding.generated.h"
 

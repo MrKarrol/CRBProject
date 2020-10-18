@@ -5,8 +5,6 @@
 
 #include "Components/DecalComponent.h"
 #include "DrawDebugHelpers.h"
-#include "NavigationSystem.h"
-#include "ResourceBuildingNavArea.h"
 
 int AResourceBuilding::m_RbCount = 1;
 
@@ -161,16 +159,6 @@ TArray<Point> GetCirclePoints(const Point &center, const float resource_income_d
 	return result;
 }
 
-FBox MakeBox(const AActor *actor)
-{
-	FVector origin;
-	FVector boxExtent;
-	actor->GetActorBounds(true, origin, boxExtent, true);
-	boxExtent += FVector(4, 4, 4);
-	FBox box(origin - boxExtent, origin + boxExtent);
-	return std::move(box);
-}
-
 float AResourceBuilding::ResourceBuildingIncome() const
 {
 	auto income_area_points = GetCirclePoints({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius, income_algorithm_depth);
@@ -189,11 +177,11 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	// remove points by income areas intersection
 	for (const auto& hit : out_hits)
 	{
-		auto actor = hit.Actor.Get();
+		const auto actor = hit.Actor.Get();
 		if (!Cast<AResourceBuilding>(actor))
 			continue;
 
-		const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
+		const float distance_to_another_rb = GetDistanceTo(actor);
 		if (distance_to_another_rb < 1) // hitted by himself
 			continue;
 		if (distance_to_another_rb > income_area_radius * 2) // income circles do not overlap each other
@@ -202,7 +190,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		auto income_area_points_dub = income_area_points;
 		for (const auto &point : income_area_points)
 		{
-			auto rb_location = hit.Actor.Get()->GetActorLocation();
+			auto rb_location = actor->GetActorLocation();
 			if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
 				income_area_points_dub.Remove(point);
 		}
