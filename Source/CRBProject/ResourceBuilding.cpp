@@ -8,9 +8,12 @@
 #include "NavigationSystem.h"
 #include "ResourceBuildingNavArea.h"
 
+int AResourceBuilding::m_RbCount = 1;
+
 // Sets default values
 AResourceBuilding::AResourceBuilding()
 {
+	m_Num = m_RbCount++;
 	// In your constructor
 	scene_root = CreateDefaultSubobject<USceneComponent>(TEXT("scene_root"));
 	RootComponent = scene_root;
@@ -112,7 +115,7 @@ void AResourceBuilding::Tick(float DeltaTime)
 	}
 	else
 		m_CurrentIncome = income;
-	income_text->SetText(FString::FromInt(m_CurrentIncome));
+	income_text->SetText(FString::FromInt(m_Num) + " " + FString::FromInt(m_CurrentIncome));
 }
 
 
@@ -163,7 +166,45 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius);
 	/*for (auto point : income_area_points)
 		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
-	DrawDebugPoint(GetWorld(), FVector(GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z + 130), 10.f, FColor::Red);
+	
+	// get all unaccessible points (don't know how to do it with navigation stuff
+	TArray<FHitResult> out_hits;
+	{
+		FQuat rot = FQuat::Identity;
+		FCollisionObjectQueryParams object_query_params;
+		object_query_params.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+		FCollisionShape collision_shape = FCollisionShape::MakeSphere(income_area_radius * 2);
+
+		GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius * 2, rot, object_query_params, collision_shape, {});
+	}
+	
+	TArray<FBox> unreachable_areas;
+	for (const auto& hit : out_hits)
+	{
+		auto actor = hit.Actor.Get();
+		if (!Cast<AResourceBuilding>(actor))
+			continue;
+
+		const float distance_to_another_rb = GetDistanceTo(actor);
+		if (distance_to_another_rb > income_area_radius * 2) // income circles do not overlap each other
+			continue;
+
+		FVector origin;
+		FVector boxExtent;
+		actor->GetActorBounds(true, origin, boxExtent, true);
+		boxExtent += FVector(4, 4, 4);
+		FBox box(origin - boxExtent, origin + boxExtent);
+
+		unreachable_areas.Emplace(box);
+	}
+
+	auto IsPointReachable = [unreachable_areas](const FVector &point)
+	{
+		for (const auto &box : unreachable_areas)
+			if (FMath::PointBoxIntersection(point, box))
+				return false;
+		return true;
+	};
 
 	const auto world = GetWorld();
 	if (!world)
@@ -173,26 +214,31 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	if (!nav_system)
 		return 0;
 
-	const ANavigationData* nav_data = nav_system->GetNavDataForProps(GetWorld()->GetFirstPlayerController()->GetNavAgentPropertiesRef());
+	const ANavigationData* nav_data = nav_system->GetNavDataForProps(world->GetFirstPlayerController()->GetNavAgentPropertiesRef());
 	if (!nav_data)
 		return 0;
 
-	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("num: %d"), filter->GetExcludeFlags()));
+	FVector start;
+	{
+		FNavLocation start_location;
 
-	FVector start = GetActorLocation();
+		FVector origin;
+		FVector boxExtent;
+		GetActorBounds(true, origin, boxExtent, true);
+		boxExtent += FVector(4, 4, 4);
 
-	// find another resource buildings
-	TArray<FHitResult> out_hits;
-	FQuat rot = FQuat::Identity;
-	FCollisionObjectQueryParams object_query_params;
-	object_query_params.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
-	FCollisionShape collision_shape = FCollisionShape::MakeSphere(income_area_radius * 2);
+		//int times = 0;
+		do 
+		{
+			nav_data->GetRandomPointInNavigableRadius(GetActorLocation(), income_area_radius, start_location);
+			start = start_location.Location;
+			/*times++;
+			if (times > 20)
+				break;*/
+		} while (!IsPointReachable(start));
+	}
 
-	GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius * 2, rot, object_query_params, collision_shape, {});
-
-
-	TArray<Point> wrong_points;
-	auto income_area_points_size = income_area_points.Num();
+	auto income_area_points_initial_size = income_area_points.Num();
 	{
 		auto income_area_points_dub = income_area_points;
 		for (const auto &point : income_area_points)
@@ -208,8 +254,6 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		income_area_points = std::move(income_area_points_dub);
 	}
 	
-
-	
 	for (const auto& hit : out_hits)
 	{
 		auto actor = hit.Actor.Get();
@@ -219,7 +263,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
 		if (distance_to_another_rb < 1) // hitted by himself
 			continue;
-		if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
+		if (distance_to_another_rb > income_area_radius * 2) // income circles do not overlap each other
 			continue;
 
 		auto income_area_points_dub = income_area_points;
@@ -231,11 +275,13 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		}
 		income_area_points = std::move(income_area_points_dub);
 	}
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("income: %f, good: %d, wrong: %d"), m_CurrentIncome, income_area_points.Num(), income_area_points_size - income_area_points.Num()));
-
+	/*if (income_area_points.Num() < income_area_points_initial_size / 2)
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d, start: %s"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num(), *start.ToString()));
+	else
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num()));
+*/
 	//float income = float(income_area_points.Num() - wrong_points.Num()) / income_area_points.Num() * 100;
-	float income = float(income_area_points.Num()) / income_area_points_size * 100;
+	float income = float(income_area_points.Num()) / income_area_points_initial_size * 100;
 
 	return income;
 }

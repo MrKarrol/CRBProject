@@ -72,4 +72,7 @@ private:
 	bool m_IsPlaced = true;
 	float m_CurrentIncome = 100;
 	bool m_IsSelected = false;
+
+	int m_Num = 0;
+	static int m_RbCount;
 };
