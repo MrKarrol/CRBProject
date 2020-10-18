@@ -133,7 +133,7 @@ double GetDistance(const Point &a, const Point &b)
 };
 
 
-TArray<Point> GetCirclePoints3(const Point &center, const float resource_income_distance, const int depth = 20)
+TArray<Point> GetCirclePoints(const Point &center, const float resource_income_distance, const int depth = 20)
 {
 	TArray<Point> result;
 
@@ -173,27 +173,9 @@ FBox MakeBox(const AActor *actor)
 
 float AResourceBuilding::ResourceBuildingIncome() const
 {
-	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius, income_algorithm_depth);
-	// removing central points - points that is inside this object
-	{
-		auto box = MakeBox(this);
-
-		auto income_area_points_dub = income_area_points;
-		for (const auto &point : income_area_points)
-		{
-			FVector temp = FVector(point.first, point.second, box.GetCenter().Z);
-			if (FMath::PointBoxIntersection(temp, box))
-				income_area_points_dub.Remove(point);
-		}
-			
-		income_area_points = std::move(income_area_points_dub);
-	}
+	auto income_area_points = GetCirclePoints({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius, income_algorithm_depth);
 	auto income_area_points_initial_size = income_area_points.Num();
 
-	/*for (auto point : income_area_points)
-		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
-	
-	// get all unaccessible points (don't know how to do it with navigation stuff
 	TArray<FHitResult> out_hits;
 	{
 		FQuat rot = FQuat::Identity;
@@ -203,75 +185,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 
 		GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius * 2, rot, object_query_params, collision_shape, {});
 	}
-	
-	// finding unreachable points caused by another resource buildings
-	TArray<FBox> unreachable_areas;
-	for (const auto& hit : out_hits)
-	{
-		auto actor = hit.Actor.Get();
-		if (!Cast<AResourceBuilding>(actor))
-			continue;
 
-		const float distance_to_another_rb = GetDistanceTo(actor);
-		if (distance_to_another_rb > income_area_radius * 2) // income circles do not overlap each other
-			continue;
-
-		unreachable_areas.Emplace(MakeBox(actor));
-	}
-
-	auto IsPointReachable = [this, unreachable_areas](const FVector &point, float z_limit)
-	{
-		for (const auto &box : unreachable_areas)
-			if (FMath::PointBoxIntersection(point, box))
-				return false;
-		return true;
-	};
-
-	// remove points by collision with solid objects
-	const auto world = GetWorld();
-	if (!world)
-		return 0;
-
-	const auto nav_system = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
-	if (!nav_system)
-		return 0;
-
-	const ANavigationData* nav_data = nav_system->GetNavDataForProps(world->GetFirstPlayerController()->GetNavAgentPropertiesRef());
-	if (!nav_data)
-		return 0;
-
-	FVector start;
-	{
-		// getting start point
-		FNavLocation start_location;
-
-		FVector origin, boxExtent;
-		GetActorBounds(true, origin, boxExtent, true);
-		
-
-		do 
-		{
-			nav_data->GetRandomPointInNavigableRadius(GetActorLocation(), income_area_radius, start_location);
-			start = start_location.Location;
-		} while (!IsPointReachable(start, boxExtent.Z));
-	}
-	
-	{
-		
-		auto income_area_points_dub = income_area_points;
-		for (const auto &point : income_area_points)
-		{
-			FVector end(point.first, point.second, start.Z);
-
-			FPathFindingQuery query(nav_system, *nav_data, start, end);
-			if (!nav_system->TestPathSync(query))
-			{
-				income_area_points_dub.Remove(point);
-			}
-		}
-		income_area_points = std::move(income_area_points_dub);
-	}
-	
 	// remove points by income areas intersection
 	for (const auto& hit : out_hits)
 	{
@@ -294,11 +208,6 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		}
 		income_area_points = std::move(income_area_points_dub);
 	}
-	if (income_area_points.Num() < income_area_points_initial_size / 2)
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d, start: %s"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num(), *start.ToString()));
-	else
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%d, good: %d, wrong: %d"), m_Num, income_area_points.Num(), income_area_points_initial_size - income_area_points.Num()));
-
 
 	float income = float(income_area_points.Num()) / income_area_points_initial_size * 100;
 
