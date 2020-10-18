@@ -7,7 +7,6 @@
 #include "DrawDebugHelpers.h"
 #include "NavigationSystem.h"
 #include "ResourceBuildingNavArea.h"
-#include "ResourceBNavigationQueryFilter.h"
 
 // Sets default values
 AResourceBuilding::AResourceBuilding()
@@ -26,9 +25,6 @@ AResourceBuilding::AResourceBuilding()
 	income_area_circle = CreateDefaultSubobject<UDecalComponent>("income_area_circle");
 	income_area_circle->SetupAttachment(RootComponent);
 	income_area_circle->SetRelativeLocation(FVector(0, 0, 0));
-
-	//income_area = CreateDefaultSubobject<UResourceBuildingNavModComponent>("income_area");
-	
 
 	income_text = CreateDefaultSubobject<UTextRenderComponent>("income_text");
 	income_text->SetupAttachment(RootComponent);
@@ -103,9 +99,6 @@ void AResourceBuilding::Tick(float DeltaTime)
 		if (! m_PostPlacingActionsApplied)
 		{
 			cube->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("area: %d"), income_area->AreaClass));
-			//income_area->SetAreaClass(UResourceBuildingNavArea::StaticClass());
-			// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("area new: %d"), income_area->AreaClass));
 			m_PostPlacingActionsApplied = true;
 		}
 		// some logic
@@ -170,7 +163,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	auto income_area_points = GetCirclePoints3({ GetActorLocation().X, GetActorLocation().Y }, income_area_radius);
 	/*for (auto point : income_area_points)
 		DrawDebugPoint(GetWorld(), FVector(point.first, point.second, GetActorLocation().Z), 10.f, FColor::Red);*/
-
+	DrawDebugPoint(GetWorld(), FVector(GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z + 130), 10.f, FColor::Red);
 
 	const auto world = GetWorld();
 	if (!world)
@@ -184,21 +177,19 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	if (!nav_data)
 		return 0;
 
-	const auto filter = UResourceBNavigationQueryFilter::GetQueryFilter<UResourceBNavigationQueryFilter>(*nav_data);
-	
 	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("num: %d"), filter->GetExcludeFlags()));
 
 	FVector start = GetActorLocation();
 
 	// find another resource buildings
-	/*TArray<FHitResult> out_hits;
+	TArray<FHitResult> out_hits;
 	FQuat rot = FQuat::Identity;
 	FCollisionObjectQueryParams object_query_params;
 	object_query_params.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
 	FCollisionShape collision_shape = FCollisionShape::MakeSphere(income_area_radius * 2);
 
 	GetWorld()->SweepMultiByObjectType(out_hits, GetActorLocation(), GetActorLocation() + income_area_radius * 2, rot, object_query_params, collision_shape, {});
-*/
+
 
 	TArray<Point> wrong_points;
 
@@ -206,7 +197,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	{
 		FVector end(point.first, point.second, start.Z);
 
-		FPathFindingQuery query(nav_system, *nav_data, start, end, filter);
+		FPathFindingQuery query(nav_system, *nav_data, start, end);
 		if (!nav_system->TestPathSync(query))
 		{
 			if (wrong_points.Find(point) == INDEX_NONE)
@@ -224,7 +215,29 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	//	if (!Cast<AResourceBuilding>(actor))
 	//		continue;
 
-	//	float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
+	//	const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
+	//	if (distance_to_another_rb < 1) // hitted by himself
+	//		continue;
+	//	if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
+	//		continue;
+
+	//	for (const auto &point : income_area_points)
+	//	{
+	//		auto rb_location = hit.Actor.Get()->GetActorLocation();
+	//		if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
+	//			if (wrong_points.Find(point) == INDEX_NONE)
+	//			{
+	//				wrong_points.Emplace(point);
+	//				continue;
+	//			}
+	//	}
+	//}for (const auto& hit : out_hits)
+	//{
+	//	auto actor = hit.Actor.Get();
+	//	if (!Cast<AResourceBuilding>(actor))
+	//		continue;
+
+	//	const float distance_to_another_rb = GetDistanceTo(hit.Actor.Get());
 	//	if (distance_to_another_rb < 1) // hitted by himself
 	//		continue;
 	//	if (distance_to_another_rb > income_area_radius*2) // income circles do not overlap each other
@@ -241,7 +254,7 @@ float AResourceBuilding::ResourceBuildingIncome() const
 	//			}
 	//	}
 	//}
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("good: %d, wrong: %d"), income_area_points.Num(), wrong_points.Num()));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("income: %f, good: %d, wrong: %d"), m_CurrentIncome, income_area_points.Num(), wrong_points.Num()));
 
 	float income = float(income_area_points.Num() - wrong_points.Num()) / income_area_points.Num() * 100;
 

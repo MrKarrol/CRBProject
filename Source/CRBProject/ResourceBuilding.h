@@ -54,9 +54,6 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *cube;
 
-	/*UPROPERTY(VisibleAnywhere)
-	UResourceBuildingNavModComponent *income_area;*/
-
 	UPROPERTY(VisibleAnywhere) 
 	UTextRenderComponent *income_text;
 
