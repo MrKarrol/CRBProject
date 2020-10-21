@@ -187,14 +187,12 @@ float AResourceBuilding::ResourceBuildingIncome() const
 		if (distance_to_another_rb > income_area_radius * 2) // income circles do not overlap each other
 			continue;
 
-		auto income_area_points_dub = income_area_points;
-		for (const auto &point : income_area_points)
+		for (int32 i = 0; i < income_area_points.Num(); ++i)
 		{
 			auto rb_location = actor->GetActorLocation();
-			if (GetDistance(point, Point(rb_location.X, rb_location.Y)) < income_area_radius)
-				income_area_points_dub.Remove(point);
+			if (GetDistance(income_area_points[i], Point(rb_location.X, rb_location.Y)) < income_area_radius)
+				income_area_points.RemoveAt(i--);
 		}
-		income_area_points = std::move(income_area_points_dub);
 	}
 
 	float income = float(income_area_points.Num()) / income_area_points_initial_size * 100;
